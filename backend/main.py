@@ -1,0 +1,46 @@
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+from contextlib import asynccontextmanager
+
+from app.api.routes import knowledge, quiz, code_check
+from app.database import init_db
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Initialize database on startup"""
+    await init_db()
+    yield
+
+
+app = FastAPI(
+    title="LeetCode Learning Platform",
+    description="AI-powered algorithm learning platform",
+    version="1.0.0",
+    lifespan=lifespan
+)
+
+# CORS middleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:5173", "http://localhost:3000"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# Include routers
+app.include_router(knowledge.router, prefix="/api/knowledge", tags=["knowledge"])
+app.include_router(quiz.router, prefix="/api/quiz", tags=["quiz"])
+app.include_router(code_check.router, prefix="/api/code", tags=["code"])
+
+
+@app.get("/")
+async def root():
+    return {"message": "LeetCode Learning Platform API", "status": "running"}
+
+
+@app.get("/health")
+async def health_check():
+    return {"status": "healthy"}
+
