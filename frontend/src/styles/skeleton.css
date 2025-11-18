@@ -1,0 +1,130 @@
+/* Skeleton Loading - Global Styles */
+/* 可在任何页面复用的骨架屏样式 */
+
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    var(--bg-tertiary) 0%,
+    var(--border-color) 50%,
+    var(--bg-tertiary) 100%
+  );
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.5s ease-in-out infinite;
+  border-radius: 6px;
+  opacity: 0.7;
+}
+
+@keyframes skeleton-shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+/* Common Skeleton Elements */
+.skeleton-text {
+  height: 16px;
+  margin-bottom: 0.5rem;
+}
+
+.skeleton-heading {
+  height: 32px;
+  width: 60%;
+  margin-bottom: 1rem;
+}
+
+.skeleton-title {
+  height: 24px;
+  width: 50%;
+  margin-bottom: 0.75rem;
+}
+
+.skeleton-subtitle {
+  height: 20px;
+  width: 70%;
+  margin-bottom: 0.5rem;
+}
+
+.skeleton-paragraph {
+  height: 16px;
+  width: 100%;
+  margin-bottom: 0.5rem;
+}
+
+.skeleton-button {
+  height: 40px;
+  width: 120px;
+  border-radius: 8px;
+}
+
+.skeleton-avatar {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+}
+
+.skeleton-icon {
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+}
+
+.skeleton-badge {
+  width: 60px;
+  height: 24px;
+  border-radius: 12px;
+}
+
+.skeleton-circle {
+  border-radius: 50%;
+}
+
+/* Skeleton Card */
+.skeleton-card {
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: 1.5rem;
+  pointer-events: none;
+}
+
+.skeleton-card:hover {
+  transform: none;
+  box-shadow: none;
+}
+
+/* Loading Container */
+.loading-container {
+  padding: 2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+/* Pulse Animation (alternative) */
+.skeleton-pulse {
+  animation: skeleton-pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes skeleton-pulse {
+  0%, 100% {
+    opacity: 0.7;
+  }
+  50% {
+    opacity: 0.4;
+  }
+}
+
+/* Disable hover on skeleton items */
+.skeleton-item {
+  pointer-events: none;
+  cursor: default;
+}
+
+.skeleton-item:hover {
+  transform: none;
+  background: var(--bg-tertiary);
+}
+

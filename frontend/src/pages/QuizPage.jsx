@@ -69,7 +69,48 @@ const QuizPage = () => {
   }
 
   if (loading) {
-    return <div className="loading">Loading questions...</div>
+    return (
+      <div className="quiz-page">
+        {/* Sidebar Skeleton */}
+        <div className="quiz-sidebar">
+          <h3>Questions</h3>
+          <div className="question-list">
+            {[1, 2, 3, 4, 5].map(i => (
+              <div key={i} className="question-item skeleton-item">
+                <span className="skeleton skeleton-badge"></span>
+                <span className="skeleton skeleton-text" style={{ width: '70%', margin: '0.5rem 0' }}></span>
+                <span className="skeleton skeleton-badge"></span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Main Content Skeleton */}
+        <div className="quiz-main">
+          <div className="question-header">
+            <div className="skeleton skeleton-title" style={{ width: '300px' }}></div>
+            <div className="skeleton skeleton-button" style={{ width: '100px' }}></div>
+          </div>
+
+          <div className="question-description">
+            <div className="skeleton skeleton-paragraph"></div>
+            <div className="skeleton skeleton-paragraph"></div>
+            <div className="skeleton skeleton-paragraph" style={{ width: '90%' }}></div>
+            <div className="skeleton skeleton-paragraph" style={{ width: '80%' }}></div>
+          </div>
+
+          <div className="hint-section">
+            <div className="skeleton skeleton-title" style={{ width: '200px' }}></div>
+            <div className="skeleton skeleton-paragraph" style={{ width: '60%' }}></div>
+            <div className="hint-buttons" style={{ marginTop: '1rem' }}>
+              <div className="skeleton skeleton-button" style={{ flex: 1 }}></div>
+              <div className="skeleton skeleton-button" style={{ flex: 1 }}></div>
+              <div className="skeleton skeleton-button" style={{ flex: 1 }}></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    )
   }
 
   if (!currentQuestion) {
