@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 
-from app.api.routes import knowledge, quiz, code_check
+from app.api.routes import knowledge, quiz, code_check, code_execution
 from app.database import init_db
 
 
@@ -33,6 +33,7 @@ app.add_middleware(
 app.include_router(knowledge.router, prefix="/api/knowledge", tags=["knowledge"])
 app.include_router(quiz.router, prefix="/api/quiz", tags=["quiz"])
 app.include_router(code_check.router, prefix="/api/code", tags=["code"])
+app.include_router(code_execution.router, prefix="/api/execute", tags=["execution"])
 
 
 @app.get("/")

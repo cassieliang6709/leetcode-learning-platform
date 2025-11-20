@@ -73,6 +73,8 @@ class QuizQuestion(Base):
     solution = Column(Text)
     hints = Column(JSON)  # Multi-level hints
     video_link = Column(String(200))
+    test_cases = Column(JSON)  # Test cases for code execution
+    starter_code = Column(JSON)  # Starter code templates for different languages
 
     # Relationships
     knowledge_point = relationship("KnowledgePoint", back_populates="quiz_questions")
