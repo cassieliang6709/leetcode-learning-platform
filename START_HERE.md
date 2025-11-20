@@ -1,138 +1,147 @@
-# 🚀 启动指南
+# 🚀 从这里开始
 
-## ✅ 当前状态
+欢迎使用 **LeetCode Learning Platform**！
 
-所有设置已完成：
-- ✅ Python 3.12 虚拟环境已创建
-- ✅ 所有 Python 依赖已安装（包括 greenlet）
-- ✅ PostgreSQL 数据库已创建
-- ✅ 数据库表已创建（7个表）
-- ✅ 初始数据已填充（9个知识点 + 1个演示用户）
-- ✅ 前端依赖已安装
-
-## 🎯 立即启动
-
-### 终端 1 - 启动后端
+## ⚡ 最快启动方式（推荐）
 
 ```bash
-cd /Users/liangyue/Documents/school/cs5001_project/backend
-source venv/bin/activate
-uvicorn main:app --reload --host 0.0.0.0 --port 8000
+# 一键启动所有服务
+./scripts/start_all.sh
 ```
 
-**看到这个说明成功了：**
-```
-INFO:     Uvicorn running on http://0.0.0.0:8000
-INFO:     Application startup complete.
-```
+然后访问:
+- 📱 前端: http://localhost:5173
+- 🔧 后端: http://localhost:8000
+- 📚 API 文档: http://localhost:8000/docs
 
-### 终端 2 - 启动前端
+## ✅ 快速检查清单
+
+### 1. 前置要求
+
+- [ ] Python 3.12+ 已安装
+- [ ] Node.js 18+ 已安装
+- [ ] PostgreSQL 14+ 已安装并运行
 
 ```bash
-cd /Users/liangyue/Documents/school/cs5001_project/frontend
-npm run dev
+# 检查版本
+python3 --version
+node --version
+psql --version
+
+# 启动 PostgreSQL（如未运行）
+brew services start postgresql@14
 ```
 
-**看到这个说明成功了：**
+### 2. 数据库设置（首次）
+
+```bash
+# 创建数据库
+psql -d postgres -c "CREATE DATABASE leetcode_learning;"
+
+# 初始化数据
+python3 scripts/init_db.py
 ```
-VITE v5.x.x  ready in xxx ms
-➜  Local:   http://localhost:5173/
+
+### 3. 启动应用
+
+```bash
+# 一键启动
+./scripts/start_all.sh
 ```
 
-## 🌐 访问应用
+### 4. 验证连接
 
-启动成功后访问：
+```bash
+# 方式 1: 命令行
+./scripts/check_connection.sh
 
-- **前端界面**: http://localhost:5173
-- **后端 API 文档**: http://localhost:8000/docs
-- **后端健康检查**: http://localhost:8000/health
+# 方式 2: 浏览器
+open scripts/test_connection.html
+```
 
-## 📊 演示账户
+## 📋 详细文档
 
-- **用户 ID**: 1
-- **用户名**: demo_user
-- **邮箱**: demo@example.com
+如果遇到问题，查看这些文档：
 
-## 🎮 使用流程
+| 文档 | 说明 |
+|------|------|
+| [QUICKSTART.md](QUICKSTART.md) | 详细启动步骤 |
+| [CONNECTION_GUIDE.md](CONNECTION_GUIDE.md) | 连接配置详解 |
+| [FRONTEND_BACKEND_CONNECTION_COMPLETE.md](FRONTEND_BACKEND_CONNECTION_COMPLETE.md) | 连接验证报告 |
+| [scripts/README.md](scripts/README.md) | 脚本使用说明 |
 
-1. **首页** → 完成知识测试（3个问题）
-2. **查看结果** → AI 生成学习计划
-3. **Roadmap** → 浏览 9 个知识点
-4. **选择知识点** → 查看练习题
-5. **练习题页面** → 使用三层提示系统：
-   - Level 1: 算法策略提示
-   - Level 2: 代码示例
-   - Level 3: YouTube 视频
-6. **Code Check** → 提交代码获取 AI 反馈
+## 🎯 功能快览
+
+1. **知识测试** - 评估你的算法基础
+2. **学习路径** - AI 生成个性化计划
+3. **题目练习** - 9 大类算法题目
+4. **多级提示** - 策略 → 代码 → 视频
+5. **代码检查** - AI 代码审查反馈
+
+## 🔧 常用命令
+
+```bash
+# 启动所有服务
+./scripts/start_all.sh
+
+# 只启动后端
+./scripts/start_backend.sh
+
+# 只启动前端
+./scripts/start_frontend.sh
+
+# 停止所有服务
+./scripts/stop_all.sh
+
+# 检查连接状态
+./scripts/check_connection.sh
+
+# 初始化数据库
+python3 scripts/init_db.py
+```
 
 ## ⚠️ 常见问题
 
 ### 端口被占用
-```bash
-# 杀死占用 8000 端口的进程
-lsof -ti:8000 | xargs kill -9
-
-# 杀死占用 5173 端口的进程
-lsof -ti:5173 | xargs kill -9
-```
-
-### 重启服务
-```bash
-# 按 Ctrl+C 停止服务，然后重新运行启动命令
-```
-
-### 查看日志
-- 后端日志会在终端 1 显示
-- 前端日志会在终端 2 显示
-- 浏览器控制台（F12）显示前端错误
-
-## 📚 数据库信息
-
-**连接信息：**
-- 数据库名：leetcode_learning
-- 用户：liangyue（你的系统用户）
-- 主机：localhost
-- 端口：5432
-
-**已创建的表：**
-1. users - 用户
-2. knowledge_points - 知识点（已有9条数据）
-3. knowledge_tests - 知识测试记录
-4. learning_plans - 学习计划
-5. quiz_questions - 练习题
-6. quiz_attempts - 答题记录
-7. code_submissions - 代码提交
-
-## 🔧 快速测试
 
 ```bash
-# 测试后端健康
-curl http://localhost:8000/health
+# 清理端口
+lsof -ti:8000 | xargs kill -9  # 后端
+lsof -ti:5173 | xargs kill -9  # 前端
 
-# 测试获取知识点
-curl http://localhost:8000/api/knowledge/points
-
-# 查看数据库
-psql -d leetcode_learning -c "SELECT * FROM knowledge_points;"
+# 或使用停止脚本
+./scripts/stop_all.sh
 ```
 
-## 🎨 界面预览
+### 数据库连接失败
 
-前端使用了现代化的紫色渐变主题：
-- 首页：知识测试和结果展示
-- Roadmap：知识点卡片网格
-- Quiz：题目列表和三层提示
-- Code Check：代码编辑和 AI 反馈
+```bash
+# 检查 PostgreSQL
+brew services list
 
-## 💡 下一步
+# 启动 PostgreSQL
+brew services start postgresql@14
 
-项目运行后，你可以：
-1. 体验完整的学习流程
-2. 查看 API 文档了解所有端点
-3. 根据需求添加更多功能
-4. 集成真实的 OpenAI API
+# 确认数据库存在
+psql -l | grep leetcode_learning
+```
+
+### Python 环境问题
+
+```bash
+# 使用 Python 3.12
+cd backend
+rm -rf venv
+python3.12 -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+```
+
+## 🎉 就这么简单！
+
+启动后，访问 http://localhost:5173 开始你的算法学习之旅！
 
 ---
 
-**准备好了吗？在两个终端运行启动命令开始使用！** 🚀
+**需要帮助？** 查看 [CONNECTION_GUIDE.md](CONNECTION_GUIDE.md) 获取详细故障排查步骤。
 
