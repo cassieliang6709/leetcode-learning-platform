@@ -13,6 +13,12 @@ export const api = {
   // Knowledge endpoints
   getKnowledgePoints: () => apiClient.get('/knowledge/points'),
   
+  getKnowledgePointDetail: (pointId) =>
+    apiClient.get(`/knowledge/points/${pointId}`),
+  
+  getKnowledgePointQuestions: (pointId) =>
+    apiClient.get(`/knowledge/points/${pointId}/questions`),
+  
   submitKnowledgeTest: (userId, testData) =>
     apiClient.post(`/knowledge/test/${userId}`, testData),
   
@@ -20,6 +26,18 @@ export const api = {
     apiClient.get(`/knowledge/plan/${userId}`),
 
   // Quiz endpoints
+  getDailyQuiz: (userId) =>
+    apiClient.get(`/quiz/daily/${userId}`),
+  
+  submitAnswer: (userId, questionId, selectedOption) =>
+    apiClient.post(`/quiz/answer/${userId}`, {
+      question_id: questionId,
+      selected_option: selectedOption
+    }),
+  
+  getDailyProgress: (userId) =>
+    apiClient.get(`/quiz/progress/${userId}`),
+  
   getQuizzesByKnowledge: (knowledgePointId) =>
     apiClient.get(`/quiz/by-knowledge/${knowledgePointId}`),
   
@@ -38,12 +56,67 @@ export const api = {
   checkCode: (userId, submissionData) =>
     apiClient.post(`/code/check/${userId}`, submissionData),
   
-  requestCodeHint: (questionId, userId, code, hintLevel = 1) =>
-    apiClient.post(`/code/hint/${questionId}/${userId}`, { code, hint_level: hintLevel }),
+  getProblems: (category = null, difficulty = null) =>
+    apiClient.get('/code/problems', {
+      params: { category, difficulty }
+    }),
+  
+  getProblemDetail: (questionId) =>
+    apiClient.get(`/code/problem/${questionId}`),
+  
+  requestCodeHint: (questionId, hintLevel) =>
+    apiClient.get(`/code/hint/${questionId}/${hintLevel}`),
   
   getUserSubmissions: (userId, questionId = null) =>
     apiClient.get(`/code/submissions/${userId}`, {
       params: questionId ? { question_id: questionId } : {}
+    }),
+
+  // Code execution endpoints
+  runCode: (code, language) =>
+    apiClient.post('/execution/run', {
+      code,
+      language,
+      test_mode: false
+    }),
+  
+  submitCode: (questionId, code, language) =>
+    apiClient.post(`/execution/submit/${questionId}`, {
+      code,
+      language
+    }),
+  
+  getStarterCode: (questionId, language = 'python') =>
+    apiClient.get(`/execution/question/${questionId}/starter-code`, {
+      params: { language }
+    }),
+  
+  getSupportedLanguages: () =>
+    apiClient.get('/execution/supported-languages'),
+
+  // AI Assistant endpoints
+  getFailureSuggestion: (questionId, code, language, testResults) =>
+    apiClient.post('/ai/suggestion/failure', {
+      question_id: questionId,
+      code,
+      language,
+      test_results: testResults
+    }),
+  
+  chatWithAI: (questionId, code, language, message, chatHistory = null) =>
+    apiClient.post('/ai/chat', {
+      question_id: questionId,
+      code,
+      language,
+      message,
+      chat_history: chatHistory
+    }),
+  
+  getOptimizationSuggestion: (questionId, code, language) =>
+    apiClient.post('/ai/suggestion/optimization', {
+      question_id: questionId,
+      code,
+      language
     }),
 }
 
