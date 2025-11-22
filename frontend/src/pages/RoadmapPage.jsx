@@ -25,150 +25,137 @@ const RoadmapPage = () => {
   }
 
   const categories = [
-    { id: 'all', name: 'All Topics', icon: '📚', count: 0 },
-    { id: 'array', name: 'Arrays & More', icon: '📊', count: 0 },
-    { id: 'string', name: 'Strings', icon: '📝', count: 0 },
-    { id: 'tree', name: 'Trees & Tries', icon: '🌳', count: 0 },
-    { id: 'graph', name: 'Graphs', icon: '🕸️', count: 0 },
-    { id: 'dp', name: 'Dynamic Programming', icon: '🎯', count: 0 },
-    { id: 'other', name: 'Advanced Topics', icon: '🔧', count: 0 }
+    { id: 'all', name: 'All Topics', icon: '📚' },
+    { id: 'array', name: 'Arrays', icon: '📊' },
+    { id: 'string', name: 'Strings', icon: '📝' },
+    { id: 'tree', name: 'Trees', icon: '🌳' },
+    { id: 'graph', name: 'Graphs', icon: '🕸️' },
+    { id: 'dp', name: 'Dynamic Programming', icon: '🎯' },
+    { id: 'other', name: 'Advanced', icon: '🔧' }
   ]
 
   const filteredPoints = selectedCategory === 'all' 
     ? knowledgePoints 
     : knowledgePoints.filter(point => point.category === selectedCategory)
 
-  const getDifficultyClass = (difficulty) => {
-    return `difficulty difficulty-${difficulty?.toLowerCase() || 'medium'}`
-  }
-
-  const getDifficultyColor = (difficulty) => {
-    const colors = {
-      easy: 'var(--success)',
-      medium: 'var(--warning)',
-      hard: 'var(--danger)'
-    }
-    return colors[difficulty?.toLowerCase()] || colors.medium
-  }
-
   const handleSelectTopic = (pointId) => {
-    navigate(`/quiz/${pointId}`)
+    navigate(`/roadmap/${pointId}/learn`)
   }
 
   if (loading) {
     return (
       <div className="roadmap-container">
-        {/* Sidebar Skeleton */}
-        <aside className="roadmap-sidebar">
-          <div className="sidebar-header">
-            <div className="skeleton skeleton-text skeleton-title"></div>
-          </div>
-          <nav className="category-nav">
-            {[1, 2, 3, 4, 5, 6, 7].map(i => (
-              <div key={i} className="category-item skeleton-category">
-                <span className="skeleton skeleton-icon"></span>
-                <span className="skeleton skeleton-text" style={{ flex: 1 }}></span>
-                <span className="skeleton skeleton-count"></span>
-              </div>
-            ))}
-          </nav>
-        </aside>
+        <div className="roadmap-header">
+          <div className="skeleton skeleton-header"></div>
+          <div className="skeleton skeleton-subtitle"></div>
+        </div>
 
-        {/* Main Content Skeleton */}
-        <main className="roadmap-main">
-          <div className="roadmap-header">
-            <div className="header-content">
-              <div className="skeleton skeleton-text skeleton-heading"></div>
-              <div className="skeleton skeleton-text skeleton-subtitle"></div>
-            </div>
-            <div className="progress-summary">
-              <div className="skeleton skeleton-circle"></div>
-              <div className="skeleton skeleton-text skeleton-label"></div>
-            </div>
-          </div>
+        <div className="skeleton-filter">
+          {[1, 2, 3, 4, 5, 6, 7].map(i => (
+            <div key={i} className="skeleton skeleton-filter-btn"></div>
+          ))}
+        </div>
 
-          <div className="topics-grid">
-            {[1, 2, 3, 4, 5, 6].map(i => (
-              <div key={i} className="topic-card skeleton-card">
-                <div className="topic-header">
-                  <div className="skeleton skeleton-number"></div>
-                  <div className="skeleton skeleton-difficulty"></div>
-                </div>
-                <div className="skeleton skeleton-text skeleton-card-title"></div>
-                <div className="skeleton skeleton-text skeleton-card-desc"></div>
-                <div className="skeleton skeleton-text skeleton-card-desc" style={{ width: '80%' }}></div>
-                <div className="topic-footer">
-                  <div className="skeleton skeleton-tag"></div>
-                  <div className="skeleton skeleton-button"></div>
-                </div>
+        <div className="topics-grid">
+          {[1, 2, 3, 4, 5, 6].map(i => (
+            <div key={i} className="topic-card skeleton-card">
+              <div className="skeleton-card-header">
+                <div className="skeleton skeleton-number"></div>
+                <div className="skeleton skeleton-difficulty"></div>
               </div>
-            ))}
-          </div>
-        </main>
+              <div className="skeleton skeleton-title"></div>
+              <div className="skeleton skeleton-desc"></div>
+              <div className="skeleton skeleton-desc"></div>
+              <div className="skeleton skeleton-footer"></div>
+            </div>
+          ))}
+        </div>
       </div>
     )
   }
 
-  const completedCount = 0 // TODO: 从后端获取
+  const completedCount = 0 // TODO: Track user progress
   const totalCount = knowledgePoints.length
 
   return (
     <div className="roadmap-container">
-      {/* Sidebar */}
-      <aside className="roadmap-sidebar">
-        <div className="sidebar-header">
-          <h2>Categories</h2>
-        </div>
-        <nav className="category-nav">
-          {categories.map(category => {
-            const count = category.id === 'all' 
-              ? knowledgePoints.length 
-              : knowledgePoints.filter(p => p.category === category.id).length
-            
-            return (
-              <button
-                key={category.id}
-                className={`category-item ${selectedCategory === category.id ? 'active' : ''}`}
-                onClick={() => setSelectedCategory(category.id)}
-              >
-                <span className="category-icon">{category.icon}</span>
-                <span className="category-name">{category.name}</span>
-                <span className="category-count">{count}</span>
-              </button>
-            )
-          })}
-        </nav>
-      </aside>
+      {/* Header */}
+      <div className="roadmap-header">
+        <h1>
+          <span className="gradient-text">Learning Roadmap</span>
+        </h1>
+        <p>Master algorithms and data structures step by step with guided learning</p>
+      </div>
 
-      {/* Main Content */}
-      <main className="roadmap-main">
-        <div className="roadmap-header">
-          <div className="header-content">
-            <h1>Learning Roadmap</h1>
-            <p>Master algorithms and data structures step by step</p>
-          </div>
-          <div className="progress-summary">
-            <div className="progress-circle">
-              <svg viewBox="0 0 36 36" className="circular-chart">
-                <path
-                  className="circle-bg"
-                  d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
-                />
-                <path
-                  className="circle"
-                  strokeDasharray={`${(completedCount / totalCount) * 100}, 100`}
-                  d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
-                />
-              </svg>
-              <div className="progress-text">
-                <span className="progress-num">{completedCount}</span>
-                <span className="progress-total">/ {totalCount}</span>
-              </div>
+      {/* Progress Summary */}
+      <div className="progress-summary-section">
+        <div className="progress-summary-card">
+          <div className="progress-text">
+            <div className="progress-label">Your Progress</div>
+            <div className="progress-numbers">
+              <span className="completed">{completedCount}</span>
+              <span style={{ opacity: 0.7 }}> / {totalCount}</span>
             </div>
-            <div className="progress-label">Completed</div>
+          </div>
+          <div className="progress-visual">
+            <svg width="80" height="80" viewBox="0 0 80 80">
+              <circle
+                cx="40"
+                cy="40"
+                r="36"
+                fill="none"
+                stroke="rgba(255, 255, 255, 0.2)"
+                strokeWidth="6"
+              />
+              <circle
+                cx="40"
+                cy="40"
+                r="36"
+                fill="none"
+                stroke="white"
+                strokeWidth="6"
+                strokeLinecap="round"
+                strokeDasharray={`${(completedCount / totalCount) * 226}, 226`}
+                transform="rotate(-90 40 40)"
+              />
+              <text
+                x="40"
+                y="45"
+                textAnchor="middle"
+                fill="white"
+                fontSize="20"
+                fontWeight="700"
+              >
+                {Math.round((completedCount / totalCount) * 100)}%
+              </text>
+            </svg>
           </div>
         </div>
+      </div>
 
+      {/* Category Filter */}
+      <div className="categories-filter">
+        {categories.map(category => {
+          const count = category.id === 'all' 
+            ? knowledgePoints.length 
+            : knowledgePoints.filter(p => p.category === category.id).length
+          
+          return (
+            <button
+              key={category.id}
+              className={`category-filter-btn ${selectedCategory === category.id ? 'active' : ''}`}
+              onClick={() => setSelectedCategory(category.id)}
+            >
+              <span className="category-icon">{category.icon}</span>
+              <span>{category.name}</span>
+              <span className="category-count">{count}</span>
+            </button>
+          )
+        })}
+      </div>
+
+      {/* Topics Grid */}
+      {filteredPoints.length > 0 ? (
         <div className="topics-grid">
           {filteredPoints.map((point, index) => (
             <div 
@@ -178,25 +165,23 @@ const RoadmapPage = () => {
             >
               <div className="topic-header">
                 <div className="topic-number">{index + 1}</div>
-                <span className={getDifficultyClass(point.difficulty)}>
-                  <span 
-                    className="difficulty-dot" 
-                    style={{ backgroundColor: getDifficultyColor(point.difficulty) }}
-                  />
+                <span className={`difficulty difficulty-${point.difficulty?.toLowerCase() || 'medium'}`}>
+                  <span className="difficulty-dot" />
                   {point.difficulty || 'Medium'}
                 </span>
               </div>
               
               <h3 className="topic-title">{point.name}</h3>
-              <p className="topic-description">{point.description}</p>
+              <p className="topic-description">
+                {point.description || 'Master this essential data structure and algorithm pattern'}
+              </p>
               
               <div className="topic-footer">
-                <div className="topic-meta">
-                  <span className="topic-category">{point.category}</span>
-                  <span className="topic-problems">0 / 5 problems</span>
+                <div className="topic-category">
+                  {point.category || 'algorithm'}
                 </div>
                 <button className="topic-start-btn">
-                  <span>Start</span>
+                  <span>Start Learning</span>
                   <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
                     <path d="M6 3L11 8L6 13" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
                   </svg>
@@ -205,16 +190,13 @@ const RoadmapPage = () => {
             </div>
           ))}
         </div>
-
-        {filteredPoints.length === 0 && (
-          <div className="empty-state">
-            <p>No topics found in this category</p>
-          </div>
-        )}
-      </main>
+      ) : (
+        <div className="empty-state">
+          <p>No topics found in this category</p>
+        </div>
+      )}
     </div>
   )
 }
 
 export default RoadmapPage
-

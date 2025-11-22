@@ -1,179 +1,319 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { api } from '../services/api'
 import './HomePage.css'
 
 const HomePage = () => {
-  const [testStarted, setTestStarted] = useState(false)
-  const [currentQuestion, setCurrentQuestion] = useState(0)
-  const [answers, setAnswers] = useState([])
-  const [testResult, setTestResult] = useState(null)
-  const [loading, setLoading] = useState(false)
+  const [questions, setQuestions] = useState([])
+  const [expandedCard, setExpandedCard] = useState(null)
+  const [selectedAnswers, setSelectedAnswers] = useState({})
+  const [answeredQuestions, setAnsweredQuestions] = useState({})
+  const [progress, setProgress] = useState({ answered_count: 0, correct_count: 0, total_questions: 3 })
+  const [loading, setLoading] = useState(true)
+  const [submitting, setSubmitting] = useState(false)
   const navigate = useNavigate()
+  
+  const userId = 1 // TODO: Get from auth context
 
-  // Demo test questions
-  const testQuestions = [
-    {
-      id: 1,
-      question: "Which data structure provides O(1) lookup time?",
-      topic: "Hash Table",
-      options: ["Array", "Hash Table", "Linked List", "Tree"],
-      correctAnswer: 1
-    },
-    {
-      id: 2,
-      question: "What is the time complexity of binary search?",
-      topic: "Binary Search",
-      options: ["O(n)", "O(log n)", "O(n²)", "O(1)"],
-      correctAnswer: 1
-    },
-    {
-      id: 3,
-      question: "Which technique is best for subarray problems?",
-      topic: "Sliding Window",
-      options: ["Two Pointers", "Sliding Window", "Binary Search", "DFS"],
-      correctAnswer: 1
-    }
-  ]
+  useEffect(() => {
+    loadDailyQuiz()
+  }, [])
 
-  const startTest = () => {
-    setTestStarted(true)
-    setCurrentQuestion(0)
-    setAnswers([])
-    setTestResult(null)
-  }
-
-  const handleAnswer = (answerIndex) => {
-    const question = testQuestions[currentQuestion]
-    const isCorrect = answerIndex === question.correctAnswer
-
-    setAnswers([...answers, {
-      question_id: question.id,
-      topic: question.topic,
-      is_correct: isCorrect
-    }])
-
-    if (currentQuestion < testQuestions.length - 1) {
-      setCurrentQuestion(currentQuestion + 1)
-    } else {
-      submitTest([...answers, {
-        question_id: question.id,
-        topic: question.topic,
-        is_correct: isCorrect
-      }])
-    }
-  }
-
-  const submitTest = async (finalAnswers) => {
+  const loadDailyQuiz = async () => {
     setLoading(true)
     try {
-      const response = await api.submitKnowledgeTest(1, { answers: finalAnswers })
-      setTestResult(response.data)
-      setTestStarted(false)
+      const response = await api.getDailyQuiz(userId)
+      setQuestions(response.data.questions)
+      setProgress({
+        answered_count: response.data.answered_count,
+        correct_count: response.data.correct_count,
+        total_questions: response.data.total_questions
+      })
     } catch (error) {
-      console.error('Error submitting test:', error)
-      alert('Failed to submit test. Please try again.')
+      console.error('Error loading daily quiz:', error)
     } finally {
       setLoading(false)
     }
   }
 
+  const handleCardClick = (questionId) => {
+    if (answeredQuestions[questionId]) return
+    setExpandedCard(expandedCard === questionId ? null : questionId)
+  }
+
+  const handleOptionSelect = (questionId, optionIndex) => {
+    setSelectedAnswers({
+      ...selectedAnswers,
+      [questionId]: optionIndex
+    })
+  }
+
+  const handleSubmitAnswer = async (questionId) => {
+    const selectedOption = selectedAnswers[questionId]
+    if (selectedOption === undefined) {
+      alert('Please select an answer first')
+      return
+    }
+
+    setSubmitting(true)
+    try {
+      const response = await api.submitAnswer(userId, questionId, selectedOption)
+      
+      setAnsweredQuestions({
+        ...answeredQuestions,
+        [questionId]: {
+          isCorrect: response.data.is_correct,
+          message: response.data.message
+        }
+      })
+      
+      setProgress(prev => ({
+        ...prev,
+        answered_count: prev.answered_count + 1,
+        correct_count: prev.correct_count + (response.data.is_correct ? 1 : 0)
+      }))
+      
+      setExpandedCard(null)
+      alert(response.data.message)
+    } catch (error) {
+      console.error('Error submitting answer:', error)
+      alert('Submission failed, please try again')
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  const getDifficultyColor = (difficulty) => {
+    switch (difficulty?.toLowerCase()) {
+      case 'easy': return '#10b981'
+      case 'medium': return '#f59e0b'
+      case 'hard': return '#ef4444'
+      default: return '#6b7280'
+    }
+  }
+
+  const getDifficultyLabel = (difficulty) => {
+    switch (difficulty?.toLowerCase()) {
+      case 'easy': return 'Easy'
+      case 'medium': return 'Medium'
+      case 'hard': return 'Hard'
+      default: return 'Unknown'
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className="home-page">
+        <div className="loading-container">
+          <div className="spinner"></div>
+          <p>Loading...</p>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="home-page">
-      <div className="hero-section">
-        <h1>Master LeetCode with AI-Powered Learning</h1>
-        <p>Test your knowledge, get personalized learning plans, and practice with guided hints</p>
-      </div>
-
-      {!testStarted && !testResult && (
-        <div className="test-intro">
-          <h2>📝 Take the Knowledge Assessment</h2>
-          <p>Answer a few questions to help us create your personalized learning plan</p>
-          <button className="btn-primary" onClick={startTest}>
-            Start Assessment
-          </button>
-        </div>
-      )}
-
-      {testStarted && (
-        <div className="test-container">
-          <div className="progress-bar">
-            <div 
-              className="progress-fill" 
-              style={{ width: `${((currentQuestion + 1) / testQuestions.length) * 100}%` }}
-            />
-          </div>
-          <p className="question-counter">
-            Question {currentQuestion + 1} of {testQuestions.length}
+      {/* Hero Section */}
+      <section className="hero-section">
+        <div className="hero-content">
+          <h1 className="hero-title">
+            <span className="gradient-text">AI-Powered</span> Algorithm Learning Platform
+          </h1>
+          <p className="hero-subtitle">
+            Master LeetCode algorithms systematically - from knowledge assessment to personalized learning paths
           </p>
+        </div>
 
-          <div className="question-card">
-            <h3>{testQuestions[currentQuestion].question}</h3>
-            <div className="options">
-              {testQuestions[currentQuestion].options.map((option, index) => (
-                <button
-                  key={index}
-                  className="option-btn"
-                  onClick={() => handleAnswer(index)}
-                >
-                  {option}
-                </button>
-              ))}
+        {/* Feature Cards */}
+        <div className="feature-cards">
+          <div className="feature-card">
+            <div className="feature-icon">🎯</div>
+            <h3 className="feature-title">Personalized Learning Path</h3>
+            <p className="feature-desc">
+              AI-generated custom study plans based on your knowledge assessment
+            </p>
+          </div>
+          <div className="feature-card">
+            <div className="feature-icon">💡</div>
+            <h3 className="feature-title">Multi-Level Hints</h3>
+            <p className="feature-desc">
+              Strategy hints → Code examples → Video tutorials
+            </p>
+          </div>
+          <div className="feature-card">
+            <div className="feature-icon">🤖</div>
+            <h3 className="feature-title">AI Code Review</h3>
+            <p className="feature-desc">
+              Instant feedback with precise problem identification and optimization suggestions
+            </p>
+          </div>
+        </div>
+      </section>
+
+      {/* Daily Challenge Section */}
+      <section className="challenge-section">
+        <div className="section-header">
+          <h2 className="section-title">📅 Daily Knowledge Challenge</h2>
+          <p className="section-subtitle">3 curated problems daily to strengthen your algorithm foundation</p>
+        </div>
+
+        <div className="challenge-container">
+          {/* Progress Sidebar */}
+          <aside className="progress-sidebar">
+            <div className="progress-card">
+              <h3 className="progress-title">Today's Progress</h3>
+              
+              <div className="circular-progress">
+                <svg className="progress-ring" viewBox="0 0 120 120">
+                  <circle
+                    className="progress-ring-bg"
+                    cx="60"
+                    cy="60"
+                    r="50"
+                  />
+                  <circle
+                    className="progress-ring-fill"
+                    cx="60"
+                    cy="60"
+                    r="50"
+                    style={{
+                      strokeDasharray: `${(progress.answered_count / progress.total_questions) * 314} 314`
+                    }}
+                  />
+                </svg>
+                <div className="progress-text">
+                  <span className="progress-number">{progress.answered_count}</span>
+                  <span className="progress-divider">/</span>
+                  <span className="progress-total">{progress.total_questions}</span>
+                </div>
+              </div>
+
+              <div className="progress-stats">
+                <div className="stat-item">
+                  <span className="stat-label">Completed</span>
+                  <span className="stat-value">{progress.answered_count}</span>
+                </div>
+                <div className="stat-item">
+                  <span className="stat-label">Correct</span>
+                  <span className="stat-value correct">{progress.correct_count}</span>
+                </div>
+                <div className="stat-item">
+                  <span className="stat-label">Accuracy</span>
+                  <span className="stat-value">
+                    {progress.answered_count > 0 
+                      ? Math.round((progress.correct_count / progress.answered_count) * 100) 
+                      : 0}%
+                  </span>
+                </div>
+              </div>
+
+              {progress.answered_count === progress.total_questions && (
+                <div className="completion-badge">
+                  <span className="badge-icon">🎉</span>
+                  <span className="badge-text">Completed Today!</span>
+                </div>
+              )}
             </div>
+          </aside>
+
+          {/* Questions List */}
+          <div className="questions-list">
+            {questions.map((question, index) => {
+              const isAnswered = answeredQuestions[question.id]
+              const isExpanded = expandedCard === question.id
+              const selectedOption = selectedAnswers[question.id]
+
+              return (
+                <div 
+                  key={question.id} 
+                  className={`question-card ${isAnswered ? 'answered' : ''} ${isExpanded ? 'expanded' : ''}`}
+                >
+                  {/* Card Header */}
+                  <div 
+                    className="card-header"
+                    onClick={() => handleCardClick(question.id)}
+                  >
+                    <div className="card-left">
+                      <span className="question-number">#{index + 1}</span>
+                      <div className="question-info">
+                        <h3 className="question-title">{question.title}</h3>
+                        {question.knowledge_point_name && (
+                          <span className="knowledge-tag">{question.knowledge_point_name}</span>
+                        )}
+                      </div>
+                    </div>
+                    <div className="card-right">
+                      <span 
+                        className="difficulty-badge"
+                        style={{ backgroundColor: getDifficultyColor(question.difficulty) }}
+                      >
+                        {getDifficultyLabel(question.difficulty)}
+                      </span>
+                      {isAnswered ? (
+                        <span className={`status-icon ${isAnswered.isCorrect ? 'correct' : 'incorrect'}`}>
+                          {isAnswered.isCorrect ? '✅' : '❌'}
+                        </span>
+                      ) : (
+                        <span className="expand-icon">{isExpanded ? '▼' : '▶'}</span>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Card Body (Expanded) */}
+                  {isExpanded && !isAnswered && (
+                    <div className="card-body">
+                      <p className="question-description">{question.description}</p>
+                      
+                      <div className="options-container">
+                        {question.options.map((option, optionIndex) => (
+                          <button
+                            key={optionIndex}
+                            className={`option-button ${selectedOption === optionIndex ? 'selected' : ''}`}
+                            onClick={() => handleOptionSelect(question.id, optionIndex)}
+                          >
+                            <span className="option-letter">{String.fromCharCode(65 + optionIndex)}</span>
+                            <span className="option-text">{option}</span>
+                          </button>
+                        ))}
+                      </div>
+
+                      <button
+                        className="submit-button"
+                        onClick={() => handleSubmitAnswer(question.id)}
+                        disabled={selectedOption === undefined || submitting}
+                      >
+                        {submitting ? 'Submitting...' : 'Submit Answer'}
+                      </button>
+                    </div>
+                  )}
+
+                  {/* Answered State */}
+                  {isAnswered && (
+                    <div className="card-result">
+                      <p className={`result-message ${isAnswered.isCorrect ? 'correct' : 'incorrect'}`}>
+                        {isAnswered.message}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              )
+            })}
           </div>
         </div>
-      )}
+      </section>
 
-      {loading && (
-        <div className="loading">
-          <p>🤖 AI is analyzing your results and creating your learning plan...</p>
-        </div>
-      )}
-
-      {testResult && (
-        <div className="test-result">
-          <h2>✅ Assessment Complete!</h2>
-          <div className="score-card">
-            <h3>Your Score: {testResult.score}/100</h3>
-            <p>Based on your results, we've created a personalized learning plan for you.</p>
-          </div>
-
-          <div className="recommendations">
-            <h3>📚 Recommended Learning Path</h3>
-            <ul>
-              {testResult.ai_plan.next_steps?.map((step, index) => (
-                <li key={index}>{step}</li>
-              ))}
-            </ul>
-            <p className="estimate">Estimated time: {testResult.ai_plan.study_time_estimate}</p>
-          </div>
-
-          <button 
-            className="btn-primary" 
-            onClick={() => navigate('/roadmap')}
-          >
-            View Your Roadmap
-          </button>
-        </div>
-      )}
-
-      <div className="features">
-        <div className="feature-card">
-          <h3>🗺️ Personalized Roadmap</h3>
-          <p>Get a customized learning path based on your current knowledge</p>
-        </div>
-        <div className="feature-card">
-          <h3>💡 Multi-Level Hints</h3>
-          <p>Stuck? Get strategy hints, code examples, or video explanations</p>
-        </div>
-        <div className="feature-card">
-          <h3>🤖 AI Code Review</h3>
-          <p>Submit your code for instant AI feedback and improvements</p>
-        </div>
-      </div>
+      {/* Quick Actions */}
+      <section className="actions-section">
+        <button className="action-btn primary" onClick={() => navigate('/roadmap')}>
+          📚 View Learning Path
+        </button>
+        <button className="action-btn secondary" onClick={() => navigate('/quiz')}>
+          💻 Start Practice
+        </button>
+      </section>
     </div>
   )
 }
 
 export default HomePage
-
