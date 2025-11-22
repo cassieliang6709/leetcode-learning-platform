@@ -1,7 +1,12 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
+import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
+import rehypeHighlight from 'rehype-highlight'
+import rehypeRaw from 'rehype-raw'
 import { api } from '../services/api'
 import './LearningPage.css'
+import 'highlight.js/styles/github-dark.css'
 
 const LearningPage = () => {
   const { pointId } = useParams()
@@ -10,11 +15,16 @@ const LearningPage = () => {
   const [loading, setLoading] = useState(true)
   const [knowledgePoint, setKnowledgePoint] = useState(null)
   const [questions, setQuestions] = useState([])
-  const [currentStep, setCurrentStep] = useState('article') // article, quiz, practice
+  const [activeTab, setActiveTab] = useState('article') // article, quiz, practice
   const [currentQuizIndex, setCurrentQuizIndex] = useState(0)
   const [selectedAnswer, setSelectedAnswer] = useState(null)
   const [showExplanation, setShowExplanation] = useState(false)
   const [quizResults, setQuizResults] = useState([])
+  const [completedSections, setCompletedSections] = useState({
+    article: false,
+    quiz: false,
+    practice: false
+  })
 
   useEffect(() => {
     loadLearningContent()
@@ -37,12 +47,8 @@ const LearningPage = () => {
     }
   }
 
-  const handleContinueToQuiz = () => {
-    if (!knowledgePoint?.reading_questions || knowledgePoint.reading_questions.length === 0) {
-      setCurrentStep('practice')
-    } else {
-      setCurrentStep('quiz')
-    }
+  const markSectionComplete = (section) => {
+    setCompletedSections(prev => ({ ...prev, [section]: true }))
   }
 
   const handleAnswerSelect = (index) => {
@@ -64,7 +70,8 @@ const LearningPage = () => {
       setSelectedAnswer(null)
       setShowExplanation(false)
     } else {
-      setCurrentStep('practice')
+      markSectionComplete('quiz')
+      setActiveTab('practice')
     }
   }
 
@@ -105,59 +112,66 @@ const LearningPage = () => {
     )
   }
 
-  const progressPercentage = 
-    currentStep === 'article' ? 33 : 
-    currentStep === 'quiz' ? 66 : 
-    100
+  const hasQuizQuestions = knowledgePoint.reading_questions && knowledgePoint.reading_questions.length > 0
 
   return (
     <div className="learning-container">
-      {/* Progress Bar */}
-      <div className="learning-progress-bar">
-        <div className="progress-track">
-          <div 
-            className="progress-fill" 
-            style={{ width: `${progressPercentage}%` }}
-          />
-        </div>
-        <div className="progress-steps">
-          <div className={`step ${currentStep === 'article' ? 'active' : 'completed'}`}>
-            <div className="step-circle">📖</div>
-            <span>Read</span>
-          </div>
-          <div className={`step ${currentStep === 'quiz' ? 'active' : currentStep === 'practice' ? 'completed' : ''}`}>
-            <div className="step-circle">❓</div>
-            <span>Quiz</span>
-          </div>
-          <div className={`step ${currentStep === 'practice' ? 'active' : ''}`}>
-            <div className="step-circle">💻</div>
-            <span>Practice</span>
-          </div>
-        </div>
+      {/* Header */}
+      <div className="learning-header">
+        <button onClick={() => navigate('/roadmap')} className="btn-back-simple">
+          ← Back
+        </button>
+        <h1>{knowledgePoint.name}</h1>
+        <span 
+          className="difficulty-badge"
+          style={{ backgroundColor: getDifficultyColor(knowledgePoint.difficulty) }}
+        >
+          {knowledgePoint.difficulty}
+        </span>
       </div>
 
-      {/* Article Step */}
-      {currentStep === 'article' && (
-        <div className="learning-content">
-          <div className="learning-header">
-            <button onClick={() => navigate('/roadmap')} className="btn-back-simple">
-              ← Back
-            </button>
-            <h1>{knowledgePoint.name}</h1>
-            <span 
-              className="difficulty-badge"
-              style={{ backgroundColor: getDifficultyColor(knowledgePoint.difficulty) }}
-            >
-              {knowledgePoint.difficulty}
-            </span>
-          </div>
+      {/* Tab Navigation */}
+      <div className="tab-navigation">
+        <button 
+          className={`tab-btn ${activeTab === 'article' ? 'active' : ''} ${completedSections.article ? 'completed' : ''}`}
+          onClick={() => setActiveTab('article')}
+        >
+          <span className="tab-icon">📖</span>
+          <span>Article</span>
+          {completedSections.article && <span className="check-mark">✓</span>}
+        </button>
+        <button 
+          className={`tab-btn ${activeTab === 'quiz' ? 'active' : ''} ${completedSections.quiz ? 'completed' : ''}`}
+          onClick={() => setActiveTab('quiz')}
+          disabled={!hasQuizQuestions}
+        >
+          <span className="tab-icon">❓</span>
+          <span>Quiz</span>
+          {completedSections.quiz && <span className="check-mark">✓</span>}
+          {!hasQuizQuestions && <span className="disabled-label">(N/A)</span>}
+        </button>
+        <button 
+          className={`tab-btn ${activeTab === 'practice' ? 'active' : ''} ${completedSections.practice ? 'completed' : ''}`}
+          onClick={() => setActiveTab('practice')}
+        >
+          <span className="tab-icon">💻</span>
+          <span>Practice</span>
+          {completedSections.practice && <span className="check-mark">✓</span>}
+        </button>
+      </div>
 
+      {/* Article Tab */}
+      {activeTab === 'article' && (
+        <div className="learning-content">
           <div className="article-card">
             {knowledgePoint.article_content ? (
-              <div className="article-content">
-                {knowledgePoint.article_content.split('\n\n').map((paragraph, index) => (
-                  <p key={index}>{paragraph}</p>
-                ))}
+              <div className="article-content markdown-content">
+                <ReactMarkdown
+                  remarkPlugins={[remarkGfm]}
+                  rehypePlugins={[rehypeHighlight, rehypeRaw]}
+                >
+                  {knowledgePoint.article_content}
+                </ReactMarkdown>
               </div>
             ) : (
               <div className="article-placeholder">
@@ -171,15 +185,25 @@ const LearningPage = () => {
           </div>
 
           <div className="learning-actions">
-            <button onClick={handleContinueToQuiz} className="btn-continue">
-              Continue →
+            <button 
+              onClick={() => {
+                markSectionComplete('article')
+                if (hasQuizQuestions) {
+                  setActiveTab('quiz')
+                } else {
+                  setActiveTab('practice')
+                }
+              }} 
+              className="btn-continue"
+            >
+              Mark as Read & Continue →
             </button>
           </div>
         </div>
       )}
 
-      {/* Quiz Step */}
-      {currentStep === 'quiz' && knowledgePoint.reading_questions && (
+      {/* Quiz Tab */}
+      {activeTab === 'quiz' && hasQuizQuestions && (
         <div className="learning-content">
           <div className="quiz-header">
             <h2>Check Your Understanding</h2>
@@ -261,8 +285,8 @@ const LearningPage = () => {
         </div>
       )}
 
-      {/* Practice Step */}
-      {currentStep === 'practice' && (
+      {/* Practice Tab */}
+      {activeTab === 'practice' && (
         <div className="learning-content">
           <div className="practice-header">
             <h2>Practice Problems</h2>
@@ -310,8 +334,14 @@ const LearningPage = () => {
           )}
 
           <div className="learning-actions">
-            <button onClick={() => navigate('/roadmap')} className="btn-finish">
-              ✓ Complete & Return
+            <button 
+              onClick={() => {
+                markSectionComplete('practice')
+                navigate('/roadmap')
+              }} 
+              className="btn-finish"
+            >
+              ✓ Complete & Return to Roadmap
             </button>
           </div>
         </div>
