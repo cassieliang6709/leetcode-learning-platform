@@ -34,58 +34,67 @@ async def create_sample_data():
             # 创建知识点
             knowledge_points = [
                 KnowledgePoint(
-                    id=1,
-                    name="Array & String",
-                    description="基础数组和字符串操作",
-                    difficulty_level=1
+                    name="Array",
+                    description="基础数组操作",
+                    difficulty="easy",
+                    category="basics",
+                    order_index=1
                 ),
                 KnowledgePoint(
-                    id=2,
+                    name="String",
+                    description="字符串处理",
+                    difficulty="easy",
+                    category="basics",
+                    order_index=2
+                ),
+                KnowledgePoint(
                     name="Hash Table",
                     description="哈希表的应用",
-                    difficulty_level=1
+                    difficulty="easy",
+                    category="data_structure",
+                    order_index=3
                 ),
                 KnowledgePoint(
-                    id=3,
                     name="Two Pointers",
                     description="双指针技巧",
-                    difficulty_level=2
+                    difficulty="medium",
+                    category="technique",
+                    order_index=4
                 ),
                 KnowledgePoint(
-                    id=4,
-                    name="Binary Search",
-                    description="二分查找及其变体",
-                    difficulty_level=2
-                ),
-                KnowledgePoint(
-                    id=5,
                     name="Linked List",
                     description="链表操作和技巧",
-                    difficulty_level=2
+                    difficulty="medium",
+                    category="data_structure",
+                    order_index=5
                 ),
                 KnowledgePoint(
-                    id=6,
-                    name="Stack & Queue",
-                    description="栈和队列的应用",
-                    difficulty_level=2
+                    name="Binary Search",
+                    description="二分查找及其变体",
+                    difficulty="medium",
+                    category="algorithm",
+                    order_index=6
                 ),
                 KnowledgePoint(
-                    id=7,
                     name="Binary Tree",
                     description="二叉树遍历和操作",
-                    difficulty_level=3
+                    difficulty="medium",
+                    category="data_structure",
+                    order_index=7
                 ),
                 KnowledgePoint(
-                    id=8,
                     name="Dynamic Programming",
                     description="动态规划基础",
-                    difficulty_level=3
+                    difficulty="hard",
+                    category="algorithm",
+                    order_index=8
                 ),
                 KnowledgePoint(
-                    id=9,
                     name="Graph",
                     description="图的遍历和算法",
-                    difficulty_level=3
+                    difficulty="hard",
+                    category="algorithm",
+                    order_index=9
                 ),
             ]
             
@@ -93,33 +102,7 @@ async def create_sample_data():
             await session.commit()
             print("✅ 创建了 9 个知识点")
             
-            # 创建示例题目
-            sample_questions = [
-                QuizQuestion(
-                    knowledge_point_id=1,
-                    title="Two Sum",
-                    description="Given an array of integers, return indices of two numbers that add up to a target.",
-                    difficulty="Easy",
-                    leetcode_url="https://leetcode.com/problems/two-sum/",
-                    hint_strategy="Use a hash map to store values and their indices as you iterate.",
-                    hint_code_example="Create a dictionary to map values to indices.",
-                    hint_video_url="https://www.youtube.com/watch?v=KLlXCFG5TnA"
-                ),
-                QuizQuestion(
-                    knowledge_point_id=2,
-                    title="Valid Anagram",
-                    description="Given two strings, determine if they are anagrams of each other.",
-                    difficulty="Easy",
-                    leetcode_url="https://leetcode.com/problems/valid-anagram/",
-                    hint_strategy="Count the frequency of each character in both strings.",
-                    hint_code_example="Use a hash map or array to count characters.",
-                    hint_video_url="https://www.youtube.com/watch?v=9UtInBqnCgA"
-                ),
-            ]
-            
-            session.add_all(sample_questions)
-            await session.commit()
-            print("✅ 创建了示例题目")
+            print("✅ 知识点创建成功，运行 init_sample_questions.py 添加题目")
             
         except Exception as e:
             print(f"❌ 错误: {e}")
