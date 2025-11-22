@@ -28,6 +28,11 @@ class KnowledgePoint(Base):
     difficulty = Column(String(20))  # easy, medium, hard
     category = Column(String(50))  # array, tree, graph, etc.
     order_index = Column(Integer, default=0)
+    
+    # Learning content fields
+    article_content = Column(Text)  # English article explaining the concept
+    reading_questions = Column(JSON)  # Q&A questions after reading
+    # Format: [{"question": "...", "options": ["A", "B", "C", "D"], "correct_answer": 1, "explanation": "..."}]
 
     # Relationships
     quiz_questions = relationship("QuizQuestion", back_populates="knowledge_point")
@@ -70,6 +75,9 @@ class QuizQuestion(Base):
     title = Column(String(200), nullable=False)
     description = Column(Text, nullable=False)
     difficulty = Column(String(20))
+    options = Column(JSON)  # Multiple choice options [str, str, str, str]
+    correct_answer = Column(Integer)  # Index of correct option (0-3)
+    explanation = Column(Text)  # Explanation of the answer
     solution = Column(Text)
     hints = Column(JSON)  # Multi-level hints
     video_link = Column(String(200))
@@ -110,5 +118,37 @@ class CodeSubmission(Base):
 
     # Relationships
     user = relationship("User", back_populates="code_submissions")
+
+
+class DailyKnowledgeQuestion(Base):
+    __tablename__ = "daily_knowledge_questions"
+
+    id = Column(Integer, primary_key=True, index=True)
+    knowledge_point_id = Column(Integer, ForeignKey("knowledge_points.id"))
+    question = Column(Text, nullable=False)  # Question text in English
+    options = Column(JSON, nullable=False)  # Array of 4 options
+    correct_answer = Column(Integer, nullable=False)  # Index 0-3
+    explanation = Column(Text)  # Answer explanation
+    difficulty = Column(String(20), default="medium")  # easy, medium, hard
+    category = Column(String(50))  # concept, complexity, data_structure, algorithm
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    # Relationships
+    knowledge_point = relationship("KnowledgePoint")
+    attempts = relationship("DailyKnowledgeAttempt", back_populates="question")
+
+
+class DailyKnowledgeAttempt(Base):
+    __tablename__ = "daily_knowledge_attempts"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    question_id = Column(Integer, ForeignKey("daily_knowledge_questions.id"), nullable=False)
+    is_correct = Column(Boolean, default=False)
+    completed_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    # Relationships
+    user = relationship("User")
+    question = relationship("DailyKnowledgeQuestion", back_populates="attempts")
 
 

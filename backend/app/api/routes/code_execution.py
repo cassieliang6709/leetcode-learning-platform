@@ -55,6 +55,13 @@ class CodeExecutionResponse(BaseModel):
     summary: Dict[str, Any] = None
 
 
+class CustomTestRequest(BaseModel):
+    """Request for custom test cases"""
+    code: str
+    language: str
+    test_cases: List[TestCase]
+
+
 @router.post("/run", response_model=CodeExecutionResponse)
 async def run_code(
     request: CodeExecutionRequest,
@@ -180,21 +187,19 @@ async def get_supported_languages():
 
 @router.post("/test-custom")
 async def test_with_custom_cases(
-    code: str,
-    language: str,
-    test_cases: List[TestCase]
+    request: CustomTestRequest
 ):
     """
     Run code with custom test cases (for testing/debugging)
     """
     formatted_cases = [
         {"input": tc.input, "expected": tc.expected}
-        for tc in test_cases
+        for tc in request.test_cases
     ]
     
     result = await execute_user_code(
-        code=code,
-        language=language,
+        code=request.code,
+        language=request.language,
         test_cases=formatted_cases
     )
     

@@ -29,6 +29,26 @@ class KnowledgePointResponse(BaseModel):
         from_attributes = True
 
 
+class ReadingQuestion(BaseModel):
+    question: str
+    options: List[str]
+    correct_answer: int
+    explanation: str
+
+
+class KnowledgePointDetailResponse(BaseModel):
+    id: int
+    name: str
+    description: Optional[str]
+    difficulty: str
+    category: str
+    article_content: Optional[str]
+    reading_questions: Optional[List[Dict[str, Any]]]
+
+    class Config:
+        from_attributes = True
+
+
 class KnowledgeTestCreate(BaseModel):
     test_data: Dict[str, Any]
 
@@ -80,4 +100,29 @@ class LearningPlanResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+class DailyQuizQuestion(BaseModel):
+    id: int
+    title: str
+    description: str
+    difficulty: str
+    options: List[str]
+    knowledge_point_name: Optional[str]
+    is_answered: bool = False
+
+    class Config:
+        from_attributes = True
+
+
+class QuizAnswerSubmit(BaseModel):
+    question_id: int
+    selected_option: int
+
+
+class DailyProgressResponse(BaseModel):
+    total_questions: int
+    answered_count: int
+    correct_count: int
+    questions: List[DailyQuizQuestion]
 

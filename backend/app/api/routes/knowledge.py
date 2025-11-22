@@ -4,8 +4,14 @@ from sqlalchemy import select
 from typing import List
 
 from app.database import get_db
-from app.models import User, KnowledgePoint, KnowledgeTest, LearningPlan
-from app.schemas import KnowledgePointResponse, KnowledgeTestCreate, KnowledgeTestResponse
+from app.models import User, KnowledgePoint, KnowledgeTest, LearningPlan, QuizQuestion
+from app.schemas import (
+    KnowledgePointResponse, 
+    KnowledgeTestCreate, 
+    KnowledgeTestResponse,
+    KnowledgePointDetailResponse,
+    QuizQuestionResponse
+)
 from app.services.ai_service import generate_learning_plan
 
 router = APIRouter()
@@ -19,6 +25,32 @@ async def get_knowledge_points(db: AsyncSession = Depends(get_db)):
     )
     points = result.scalars().all()
     return points
+
+
+@router.get("/points/{point_id}", response_model=KnowledgePointDetailResponse)
+async def get_knowledge_point_detail(point_id: int, db: AsyncSession = Depends(get_db)):
+    """Get detailed knowledge point with article and reading questions"""
+    result = await db.execute(
+        select(KnowledgePoint).where(KnowledgePoint.id == point_id)
+    )
+    point = result.scalar_one_or_none()
+    
+    if not point:
+        raise HTTPException(status_code=404, detail="Knowledge point not found")
+    
+    return point
+
+
+@router.get("/points/{point_id}/questions", response_model=List[QuizQuestionResponse])
+async def get_knowledge_point_questions(point_id: int, db: AsyncSession = Depends(get_db)):
+    """Get all LeetCode questions related to a knowledge point"""
+    result = await db.execute(
+        select(QuizQuestion)
+        .where(QuizQuestion.knowledge_point_id == point_id)
+        .order_by(QuizQuestion.difficulty, QuizQuestion.leetcode_id)
+    )
+    questions = result.scalars().all()
+    return questions
 
 
 @router.post("/test/{user_id}", response_model=KnowledgeTestResponse)

@@ -17,6 +17,12 @@ class QuickCodeCheck(BaseModel):
     language: str = "python"
 
 
+class HintRequest(BaseModel):
+    """Request hint with code"""
+    code: str
+    hint_level: int = 1
+
+
 @router.post("/analyze", response_model=CodeCheckResponse)
 async def analyze_code_quick(request: QuickCodeCheck):
     """Quick code analysis without saving to database"""
@@ -76,22 +82,105 @@ async def check_code(
     )
 
 
-@router.post("/hint/{question_id}/{user_id}")
+@router.get("/hint/{question_id}/{hint_level}")
 async def request_hint(
     question_id: int,
-    user_id: int,
-    code: str,
-    hint_level: int = 1,
+    hint_level: int,
     db: AsyncSession = Depends(get_db)
 ):
-    """Request hint based on current code and difficulty level"""
-    hint = await get_hint_by_level(question_id, code, hint_level, db)
-
-    return {
+    """
+    Request hint based on difficulty level
+    Level 1: Algorithm strategy (English)
+    Level 2: Core code implementation
+    Level 3: YouTube video recommendation
+    """
+    if hint_level < 1 or hint_level > 3:
+        raise HTTPException(status_code=400, detail="Hint level must be between 1 and 3")
+    
+    # Get question
+    result = await db.execute(
+        select(QuizQuestion).where(QuizQuestion.id == question_id)
+    )
+    question = result.scalar_one_or_none()
+    
+    if not question:
+        raise HTTPException(status_code=404, detail="Question not found")
+    
+    if not question.hints or len(question.hints) < hint_level:
+        raise HTTPException(status_code=404, detail="Hint not available")
+    
+    hint = question.hints[hint_level - 1]
+    
+    response = {
         "hint_level": hint_level,
-        "hint_type": hint.get("type"),  # strategy, code, or video
+        "hint_type": hint.get("type"),
         "content": hint.get("content"),
-        "video_link": hint.get("video_link")
+        "question_title": question.title,
+        "leetcode_id": question.leetcode_id
+    }
+    
+    # Add video link for level 3
+    if hint_level == 3 and question.video_link:
+        response["video_link"] = question.video_link
+    
+    return response
+
+
+@router.get("/problems")
+async def get_problems(
+    category: str = None,
+    difficulty: str = None,
+    db: AsyncSession = Depends(get_db)
+):
+    """Get LeetCode problems, optionally filtered by category or difficulty"""
+    query = select(QuizQuestion)
+    
+    if difficulty:
+        query = query.where(QuizQuestion.difficulty == difficulty)
+    
+    result = await db.execute(query.order_by(QuizQuestion.leetcode_id))
+    problems = result.scalars().all()
+    
+    return {
+        "problems": [
+            {
+                "id": prob.id,
+                "leetcode_id": prob.leetcode_id,
+                "title": prob.title,
+                "description": prob.description,
+                "difficulty": prob.difficulty,
+                "has_hints": prob.hints is not None and len(prob.hints) > 0,
+                "video_link": prob.video_link
+            }
+            for prob in problems
+        ]
+    }
+
+
+@router.get("/problem/{question_id}")
+async def get_problem_detail(
+    question_id: int,
+    db: AsyncSession = Depends(get_db)
+):
+    """Get detailed information about a specific problem"""
+    result = await db.execute(
+        select(QuizQuestion).where(QuizQuestion.id == question_id)
+    )
+    problem = result.scalar_one_or_none()
+    
+    if not problem:
+        raise HTTPException(status_code=404, detail="Problem not found")
+    
+    return {
+        "id": problem.id,
+        "leetcode_id": problem.leetcode_id,
+        "title": problem.title,
+        "description": problem.description,
+        "difficulty": problem.difficulty,
+        "test_cases": problem.test_cases,
+        "starter_code": problem.starter_code,
+        "video_link": problem.video_link,
+        "hints_available": [1, 2, 3] if problem.hints and len(problem.hints) >= 3 else []
     }
 
 
