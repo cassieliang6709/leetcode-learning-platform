@@ -12,10 +12,10 @@ from app.services.ai_service import generate_quiz_questions
 
 router = APIRouter()
 
-
+# ------> home page
+"""Get daily knowledge challenge questions (3 random questions excluding already answered today)"""
 @router.get("/daily/{user_id}", response_model=DailyProgressResponse)
 async def get_daily_quiz(user_id: int, db: AsyncSession = Depends(get_db)):
-    """Get daily knowledge challenge questions (3 random questions excluding already answered today)"""
     # Get today's start time
     today_start = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
     
@@ -38,6 +38,7 @@ async def get_daily_quiz(user_id: int, db: AsyncSession = Depends(get_db)):
         questions_query = select(DailyKnowledgeQuestion)
     
     questions_result = await db.execute(questions_query)
+    # return a list that includes objects of DailyKnowledgeQuestion according to query_set
     all_questions = list(questions_result.scalars().all())
     
     # If we have less than 3 questions total, return what we have
@@ -70,6 +71,7 @@ async def get_daily_quiz(user_id: int, db: AsyncSession = Depends(get_db)):
             kp_name = kp_result.scalar_one_or_none()
         
         # For frontend compatibility: use question as both title and description
+        # create objects of daily_quiz_question used on frontend
         daily_questions.append(DailyQuizQuestion(
             id=q.id,
             title=q.question,  # Use question text as title
@@ -89,14 +91,15 @@ async def get_daily_quiz(user_id: int, db: AsyncSession = Depends(get_db)):
         questions=daily_questions
     )
 
-
+# ------> Homepage
+"""Submit answer for a daily knowledge question"""
 @router.post("/answer/{user_id}")
 async def submit_answer(
     user_id: int,
     answer: QuizAnswerSubmit,
     db: AsyncSession = Depends(get_db)
 ):
-    """Submit answer for a daily knowledge question"""
+    
     # Get the question from daily_knowledge_questions
     question_result = await db.execute(
         select(DailyKnowledgeQuestion).where(DailyKnowledgeQuestion.id == answer.question_id)
