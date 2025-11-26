@@ -221,7 +221,7 @@ class PistonExecutor:
         
         return {
             "success": True,
-            "error": None,
+            "error": "",  # Empty string instead of None
             "output": stdout,
             "compile_output": compile_output,
             "run_time": 0,  # Piston doesn't provide detailed timing
