@@ -111,8 +111,29 @@ const CodeCheckPage = () => {
     setTestResults(null)
     
     try {
-      const response = await api.runCode(code, language)
-      setRunOutput(response.data.result)
+      // If we have test cases and a question selected, run with first test case
+      if (questionId && selectedProblem?.test_cases?.length > 0) {
+        const firstTestCase = selectedProblem.test_cases[0]
+        const response = await api.submitCode(questionId, code, language)
+        
+        // Show only the first test result in run output
+        const firstResult = response.data.test_results[0]
+        setRunOutput({
+          success: firstResult.passed,
+          output: firstResult.actual || 'No output',
+          error: firstResult.error || '',
+          test_info: {
+            input: firstResult.input,
+            expected: firstResult.expected,
+            actual: firstResult.actual,
+            passed: firstResult.passed
+          }
+        })
+      } else {
+        // Simple run without test cases (user needs to add print statements)
+        const response = await api.runCode(code, language)
+        setRunOutput(response.data.result)
+      }
     } catch (error) {
       console.error('Error running code:', error)
       setRunOutput({
@@ -645,15 +666,45 @@ const CodeCheckPage = () => {
               {/* Run Output */}
               {runOutput && !loading && !testResults && (
                 <div className="run-output">
-                  <h3>💻 Output</h3>
-                  {runOutput.success ? (
+                  <h3>💻 Run Output</h3>
+                  
+                  {/* Test case info if available */}
+                  {runOutput.test_info && (
+                    <div className="test-info-box">
+                      <div className="info-row">
+                        <strong>Input:</strong>
+                        <pre>{runOutput.test_info.input}</pre>
+                      </div>
+                      <div className="info-row">
+                        <strong>Expected:</strong>
+                        <pre>{runOutput.test_info.expected}</pre>
+                      </div>
+                      <div className="info-row">
+                        <strong>Your Output:</strong>
+                        <pre className={runOutput.test_info.passed ? 'output-correct' : 'output-wrong'}>
+                          {runOutput.test_info.actual || '(no output)'}
+                        </pre>
+                      </div>
+                      {runOutput.test_info.passed ? (
+                        <div className="result-badge success">✅ Passed</div>
+                      ) : (
+                        <div className="result-badge failed">❌ Failed</div>
+                      )}
+                    </div>
+                  )}
+                  
+                  {/* Simple output (no test case) */}
+                  {!runOutput.test_info && runOutput.success && (
                     <div className="output-success">
                       <pre>{runOutput.output || '(no output)'}</pre>
                       {runOutput.run_time > 0 && (
                         <p className="run-time">Runtime: {runOutput.run_time}ms</p>
                       )}
                     </div>
-                  ) : (
+                  )}
+                  
+                  {/* Error output */}
+                  {runOutput.error && !runOutput.test_info && (
                     <div className="output-error">
                       <h4>❌ Runtime Error</h4>
                       <pre>{runOutput.error}</pre>
