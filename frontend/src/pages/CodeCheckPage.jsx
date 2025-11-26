@@ -1,5 +1,9 @@
 import { useState, useEffect } from 'react'
 import { api } from '../services/api'
+import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
+import rehypeHighlight from 'rehype-highlight'
+import 'highlight.js/styles/github-dark.css'
 import './CodeCheckPage.css'
 
 const CodeCheckPage = () => {
@@ -257,49 +261,6 @@ const CodeCheckPage = () => {
       e.preventDefault()
       handleSendChatMessage()
     }
-  }
-
-  // Parse message content to detect and format code blocks
-  const parseMessageContent = (content) => {
-    const parts = []
-    const codeBlockRegex = /```(\w+)?\n([\s\S]*?)```/g
-    let lastIndex = 0
-    let match
-
-    while ((match = codeBlockRegex.exec(content)) !== null) {
-      // Add text before code block
-      if (match.index > lastIndex) {
-        const textContent = content.substring(lastIndex, match.index)
-        if (textContent.trim()) {
-          parts.push({
-            type: 'text',
-            content: textContent
-          })
-        }
-      }
-
-      // Add code block
-      parts.push({
-        type: 'code',
-        language: match[1] || 'python',
-        content: match[2].trim()
-      })
-
-      lastIndex = match.index + match[0].length
-    }
-
-    // Add remaining text
-    if (lastIndex < content.length) {
-      const textContent = content.substring(lastIndex)
-      if (textContent.trim()) {
-        parts.push({
-          type: 'text',
-          content: textContent
-        })
-      }
-    }
-
-    return parts.length > 0 ? parts : [{ type: 'text', content }]
   }
 
   const copyToClipboard = (text) => {
@@ -602,12 +563,13 @@ const CodeCheckPage = () => {
                       </div>
                       
                       {aiSuggestion && aiSuggestion.success && (
-                        <div className="ai-suggestion-content">
-                          <div className="suggestion-text">
-                            {aiSuggestion.suggestion.split('\n').map((line, idx) => (
-                              <p key={idx}>{line}</p>
-                            ))}
-                          </div>
+                        <div className="ai-suggestion-content markdown-content">
+                          <ReactMarkdown
+                            remarkPlugins={[remarkGfm]}
+                            rehypePlugins={[rehypeHighlight]}
+                          >
+                            {aiSuggestion.suggestion}
+                          </ReactMarkdown>
                         </div>
                       )}
                       
@@ -839,49 +801,49 @@ const CodeCheckPage = () => {
                 </div>
               </div>
             ) : (
-              chatHistory.map((msg, idx) => {
-                const parsedContent = parseMessageContent(msg.content)
-                return (
-                  <div key={idx} className={`chat-message ${msg.role}`}>
-                    <div className="message-avatar">
-                      {msg.role === 'user' ? '👤' : '🤖'}
-                    </div>
-                    <div className="message-content">
-                      {parsedContent.map((part, i) => {
-                        if (part.type === 'code') {
-                          return (
-                            <div key={i} className="code-block-container">
+              chatHistory.map((msg, idx) => (
+                <div key={idx} className={`chat-message ${msg.role}`}>
+                  <div className="message-avatar">
+                    {msg.role === 'user' ? '👤' : '🤖'}
+                  </div>
+                  <div className="message-content markdown-content">
+                    <ReactMarkdown
+                      remarkPlugins={[remarkGfm]}
+                      rehypePlugins={[rehypeHighlight]}
+                      components={{
+                        code: ({node, inline, className, children, ...props}) => {
+                          const match = /language-(\w+)/.exec(className || '')
+                          const codeContent = String(children).replace(/\n$/, '')
+                          
+                          return !inline && match ? (
+                            <div className="code-block-container">
                               <div className="code-block-header">
-                                <span className="code-language">{part.language}</span>
+                                <span className="code-language">{match[1]}</span>
                                 <button 
                                   className="copy-code-btn"
-                                  onClick={() => copyToClipboard(part.content)}
+                                  onClick={() => copyToClipboard(codeContent)}
                                   title="Copy code"
                                 >
                                   📋 Copy
                                 </button>
                               </div>
-                              <pre className="code-block">
-                                <code className={`language-${part.language}`}>
-                                  {part.content}
-                                </code>
-                              </pre>
+                              <code className={className} {...props}>
+                                {children}
+                              </code>
                             </div>
-                          )
-                        } else {
-                          return (
-                            <div key={i} className="text-content">
-                              {part.content.split('\n').map((line, j) => (
-                                <p key={j}>{line || '\u00A0'}</p>
-                              ))}
-                            </div>
+                          ) : (
+                            <code className={className} {...props}>
+                              {children}
+                            </code>
                           )
                         }
-                      })}
-                    </div>
+                      }}
+                    >
+                      {msg.content}
+                    </ReactMarkdown>
                   </div>
-                )
-              })
+                </div>
+              ))
             )}
             {loadingChat && (
               <div className="chat-message assistant">

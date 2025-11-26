@@ -114,31 +114,30 @@ class SiliconFlowAI:
             for test in failed_tests[:3]  # Limit to first 3 failed tests
         ])
         
-        prompt = f"""You are an expert programming tutor. A student is solving a coding problem and their solution failed some test cases.
+        prompt = f"""A student's code failed some test cases. Help them fix it.
 
-**Problem Description:**
+**Problem:**
 {problem_description}
 
-**Student's Code ({language}):**
+**Code ({language}):**
 ```{language}
 {code}
 ```
 
-**Failed Test Cases:**
+**Failed Tests:**
 {failed_info}
 
-Please provide:
-1. **Root Cause Analysis**: What's wrong with the code?
-2. **Key Insights**: What concept or logic is missing?
-3. **Hints** (without giving away the solution): Guide them to fix it
-4. **Edge Cases**: What scenarios should they consider?
+Provide a brief analysis:
+1. **Issue**: What's wrong? (1-2 sentences)
+2. **Hint**: How to fix it? (don't give full solution)
+3. **Edge cases**: What to consider?
 
-Keep your response concise, educational, and encouraging. Focus on helping them learn, not just fixing the code."""
+Be concise and encouraging. Use markdown formatting."""
 
         messages = [
             {
                 "role": "system",
-                "content": "You are a helpful programming tutor who guides students to understand and fix their code mistakes."
+                "content": "You are a concise programming tutor. Give brief, focused feedback using markdown. No excessive spacing."
             },
             {
                 "role": "user",
@@ -194,13 +193,16 @@ Keep your response concise, educational, and encouraging. Focus on helping them 
         messages = [
             {
                 "role": "system",
-                "content": """You are a helpful programming tutor. Help students understand coding problems, debug issues, and improve their solutions. Be encouraging and educational.
+                "content": """You are a concise and helpful programming tutor. Help students understand coding problems, debug issues, and improve solutions.
 
-**Important formatting rules:**
-- When showing code, ALWAYS use markdown code blocks with language specified: ```python or ```javascript etc.
-- Format your responses clearly with proper spacing
-- Use bullet points or numbered lists for multiple suggestions
-- Keep explanations concise and clear"""
+**Response guidelines:**
+- Be brief and to the point - no unnecessary explanations
+- Use markdown formatting (headings, lists, bold, etc.)
+- Code blocks MUST use proper markdown: ```python or ```javascript etc.
+- Use bullet points for multiple points
+- Maximum 2-3 short paragraphs unless asked for detail
+- Avoid excessive blank lines between paragraphs
+- Be encouraging but concise"""
             },
             {
                 "role": "user",
