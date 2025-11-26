@@ -74,9 +74,6 @@ const RoadmapPage = () => {
     )
   }
 
-  const completedCount = 0 // TODO: Track user progress
-  const totalCount = knowledgePoints.length
-
   return (
     <div className="roadmap-container">
       {/* Header */}
@@ -85,52 +82,6 @@ const RoadmapPage = () => {
           <span className="gradient-text">Learning Roadmap</span>
         </h1>
         <p>Master algorithms and data structures step by step with guided learning</p>
-      </div>
-
-      {/* Progress Summary */}
-      <div className="progress-summary-section">
-        <div className="progress-summary-card">
-          <div className="progress-text">
-            <div className="progress-label">Your Progress</div>
-            <div className="progress-numbers">
-              <span className="completed">{completedCount}</span>
-              <span style={{ opacity: 0.7 }}> / {totalCount}</span>
-            </div>
-          </div>
-          <div className="progress-visual">
-            <svg width="80" height="80" viewBox="0 0 80 80">
-              <circle
-                cx="40"
-                cy="40"
-                r="36"
-                fill="none"
-                stroke="rgba(255, 255, 255, 0.2)"
-                strokeWidth="6"
-              />
-              <circle
-                cx="40"
-                cy="40"
-                r="36"
-                fill="none"
-                stroke="white"
-                strokeWidth="6"
-                strokeLinecap="round"
-                strokeDasharray={`${(completedCount / totalCount) * 226}, 226`}
-                transform="rotate(-90 40 40)"
-              />
-              <text
-                x="40"
-                y="45"
-                textAnchor="middle"
-                fill="white"
-                fontSize="20"
-                fontWeight="700"
-              >
-                {Math.round((completedCount / totalCount) * 100)}%
-              </text>
-            </svg>
-          </div>
-        </div>
       </div>
 
       {/* Category Filter */}
