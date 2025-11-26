@@ -22,6 +22,7 @@ const CodeCheckPage = () => {
   const [chatHistory, setChatHistory] = useState([])
   const [chatMessage, setChatMessage] = useState('')
   const [loadingChat, setLoadingChat] = useState(false)
+  const [isChatMaximized, setIsChatMaximized] = useState(false)
 
   useEffect(() => {
     loadProblems()
@@ -800,15 +801,24 @@ const CodeCheckPage = () => {
 
       {/* AI Chat Dialog */}
       {showChatDialog && (
-        <div className="chat-dialog">
+        <div className={`chat-dialog ${isChatMaximized ? 'maximized' : ''}`}>
           <div className="chat-header">
             <h3>🤖 AI Assistant</h3>
-            <button 
-              className="close-chat-btn"
-              onClick={() => setShowChatDialog(false)}
-            >
-              ✕
-            </button>
+            <div className="chat-header-actions">
+              <button 
+                className="maximize-chat-btn"
+                onClick={() => setIsChatMaximized(!isChatMaximized)}
+                title={isChatMaximized ? "Restore" : "Maximize"}
+              >
+                {isChatMaximized ? '🗗' : '🗖'}
+              </button>
+              <button 
+                className="close-chat-btn"
+                onClick={() => setShowChatDialog(false)}
+              >
+                ✕
+              </button>
+            </div>
           </div>
 
           <div className="chat-messages">

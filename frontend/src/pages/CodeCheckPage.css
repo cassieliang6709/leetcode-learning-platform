@@ -1001,6 +1001,41 @@
   flex-direction: column;
   z-index: 1000;
   overflow: hidden;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.chat-dialog.maximized {
+  width: 90vw;
+  height: 85vh;
+  top: 50%;
+  left: 50%;
+  right: auto;
+  bottom: auto;
+  transform: translate(-50%, -50%);
+  border-radius: 20px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
+}
+
+/* Add backdrop for maximized mode */
+.chat-dialog.maximized::before {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: -1;
+  animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
 .chat-header {
@@ -1018,6 +1053,13 @@
   font-weight: 600;
 }
 
+.chat-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.maximize-chat-btn,
 .close-chat-btn {
   background: transparent;
   border: none;
@@ -1025,17 +1067,23 @@
   font-size: 1.5rem;
   cursor: pointer;
   padding: 0;
-  width: 30px;
-  height: 30px;
+  width: 32px;
+  height: 32px;
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 50%;
+  border-radius: 6px;
   transition: all 0.2s;
 }
 
+.maximize-chat-btn {
+  font-size: 1.3rem;
+}
+
+.maximize-chat-btn:hover,
 .close-chat-btn:hover {
   background: rgba(255, 255, 255, 0.2);
+  transform: scale(1.1);
 }
 
 .chat-messages {
@@ -1209,11 +1257,6 @@
   color: #d4d4d4;
 }
 
-/* Basic syntax highlighting */
-.code-block:has(.language-python) {
-  /* This is a simple color scheme, you can enhance it */
-}
-
 .text-content {
   margin: 0.5rem 0;
 }
@@ -1333,6 +1376,11 @@
     bottom: 90px;
   }
   
+  .chat-dialog.maximized {
+    width: 95vw;
+    height: 90vh;
+  }
+  
   .floating-chat-btn {
     bottom: 1.5rem;
     right: 1.5rem;
@@ -1362,6 +1410,17 @@
     right: 1rem;
     left: 1rem;
     bottom: 80px;
+  }
+  
+  .chat-dialog.maximized {
+    width: 100vw;
+    height: 100vh;
+    border-radius: 0;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    transform: none;
   }
   
   .floating-chat-btn {
