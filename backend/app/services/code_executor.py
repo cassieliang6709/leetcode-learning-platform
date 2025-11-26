@@ -64,6 +64,9 @@ class PistonExecutor:
                 "memory": 0
             }
         
+        # Preprocess code to add necessary imports (especially for Python)
+        code = self._preprocess_code(code, language)
+        
         payload = {
             "language": runtime,
             "version": "*",  # Use latest version
@@ -166,6 +169,24 @@ class PistonExecutor:
             })
         
         return results
+    
+    def _preprocess_code(self, code: str, language: str) -> str:
+        """
+        Preprocess code to add necessary imports and setup
+        Especially important for LeetCode-style Python code with type hints
+        """
+        language = language.lower()
+        
+        if language == "python":
+            # Check if typing imports are already present
+            has_typing_import = "from typing import" in code or "import typing" in code
+            
+            if not has_typing_import:
+                # Add common typing imports for LeetCode-style problems
+                typing_imports = "from typing import List, Dict, Optional, Set, Tuple, Any\n\n"
+                code = typing_imports + code
+        
+        return code
     
     def _parse_result(self, result: Dict) -> Dict[str, Any]:
         """Parse Piston API response"""

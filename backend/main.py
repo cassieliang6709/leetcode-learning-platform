@@ -1,8 +1,12 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
+from dotenv import load_dotenv
 
-from app.api.routes import knowledge, quiz, code_check, code_execution, ai_assistant
+# Load environment variables
+load_dotenv()
+
+from app.api.routes import knowledge, quiz, code_check, code_execution, ai_assistant, auth
 from app.database import init_db
 
 
@@ -30,6 +34,7 @@ app.add_middleware(
 )
 
 # Include routers
+app.include_router(auth.router, prefix="/api/auth", tags=["auth"])
 app.include_router(knowledge.router, prefix="/api/knowledge", tags=["knowledge"])
 app.include_router(quiz.router, prefix="/api/quiz", tags=["quiz"])
 app.include_router(code_check.router, prefix="/api/code", tags=["code"])

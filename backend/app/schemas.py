@@ -6,6 +6,12 @@ from datetime import datetime
 class UserCreate(BaseModel):
     username: str
     email: EmailStr
+    password: str
+
+
+class UserLogin(BaseModel):
+    username: str
+    password: str
 
 
 class UserResponse(BaseModel):
@@ -16,6 +22,12 @@ class UserResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+class TokenResponse(BaseModel):
+    access_token: str
+    token_type: str
+    user: UserResponse
 
 
 class KnowledgePointResponse(BaseModel):

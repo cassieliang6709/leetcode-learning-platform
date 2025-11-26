@@ -2,6 +2,7 @@
 SiliconFlow AI Service
 Integrates with SiliconFlow API for AI suggestions and chat
 """
+import os
 import aiohttp
 import json
 from typing import Dict, List, Any, Optional
@@ -12,7 +13,17 @@ class SiliconFlowAI:
     
     def __init__(self):
         self.api_url = "https://api.siliconflow.cn/v1/chat/completions"
-        self.api_key = "sk-ywiqoiuhlfyfsknsjsdmyvdllhwxsajvvafmszzbarckwzdv"
+        # Read API key from environment variable for security
+        self.api_key = os.getenv("SILICONFLOW_API_KEY")
+        
+        # Make API key optional - will use fallback mode if not set
+        if not self.api_key:
+            print("[WARNING] SILICONFLOW_API_KEY not set. AI features will use fallback mode.")
+            print("[INFO] To enable AI features, add SILICONFLOW_API_KEY to backend/.env file")
+            self.fallback_mode = True
+        else:
+            self.fallback_mode = False
+        
         self.model = "Qwen/Qwen3-30B-A3B-Instruct-2507"
         self.headers = {
             "Authorization": f"Bearer {self.api_key}",
@@ -26,6 +37,14 @@ class SiliconFlowAI:
         max_tokens: int = 2000
     ) -> Dict[str, Any]:
         """Make a request to SiliconFlow API"""
+        # Use fallback if API key not configured
+        if self.fallback_mode:
+            return {
+                "success": True,
+                "content": "AI 功能暂未配置。请在 backend/.env 文件中添加 SILICONFLOW_API_KEY 以启用完整的 AI 辅导功能。\n\n当前您可以继续使用其他功能，如：\n- 查看题目描述和测试用例\n- 运行代码并查看测试结果\n- 查看参考答案和题解",
+                "usage": {}
+            }
+        
         payload = {
             "model": self.model,
             "messages": messages,
@@ -175,7 +194,13 @@ Keep your response concise, educational, and encouraging. Focus on helping them 
         messages = [
             {
                 "role": "system",
-                "content": "You are a helpful programming tutor. Help students understand coding problems, debug issues, and improve their solutions. Be encouraging and educational."
+                "content": """You are a helpful programming tutor. Help students understand coding problems, debug issues, and improve their solutions. Be encouraging and educational.
+
+**Important formatting rules:**
+- When showing code, ALWAYS use markdown code blocks with language specified: ```python or ```javascript etc.
+- Format your responses clearly with proper spacing
+- Use bullet points or numbered lists for multiple suggestions
+- Keep explanations concise and clear"""
             },
             {
                 "role": "user",

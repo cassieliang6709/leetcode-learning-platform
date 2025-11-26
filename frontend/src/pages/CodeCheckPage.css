@@ -1065,6 +1065,106 @@
   margin-bottom: 0;
 }
 
+/* Code Block Styles in Chat */
+.code-block-container {
+  margin: 0.75rem 0;
+  border-radius: 8px;
+  overflow: hidden;
+  background: #1e1e1e;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.code-block-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.5rem 1rem;
+  background: #2d2d2d;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.code-language {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #9cdcfe;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.copy-code-btn {
+  padding: 0.25rem 0.75rem;
+  background: rgba(255, 255, 255, 0.1);
+  color: #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 4px;
+  font-size: 0.75rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.copy-code-btn:hover {
+  background: rgba(255, 255, 255, 0.2);
+  border-color: rgba(255, 255, 255, 0.3);
+}
+
+.copy-code-btn:active {
+  transform: scale(0.95);
+}
+
+.code-block {
+  margin: 0;
+  padding: 1rem;
+  overflow-x: auto;
+  background: #1e1e1e;
+  font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+  font-size: 0.85rem;
+  line-height: 1.6;
+}
+
+.code-block code {
+  color: #d4d4d4;
+  display: block;
+  white-space: pre;
+  word-wrap: normal;
+}
+
+/* Syntax highlighting for Python */
+.code-block code.language-python {
+  color: #d4d4d4;
+}
+
+/* Basic syntax highlighting */
+.code-block:has(.language-python) {
+  /* This is a simple color scheme, you can enhance it */
+}
+
+.text-content {
+  margin: 0.5rem 0;
+}
+
+.text-content p {
+  margin: 0 0 0.5rem 0;
+  line-height: 1.6;
+}
+
+/* User messages shouldn't have dark code blocks */
+.chat-message.user .code-block-container {
+  background: rgba(255, 255, 255, 0.15);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.chat-message.user .code-block-header {
+  background: rgba(255, 255, 255, 0.1);
+  border-bottom-color: rgba(255, 255, 255, 0.2);
+}
+
+.chat-message.user .code-block {
+  background: rgba(0, 0, 0, 0.2);
+}
+
 .typing-indicator {
   color: var(--text-secondary);
   font-style: italic;

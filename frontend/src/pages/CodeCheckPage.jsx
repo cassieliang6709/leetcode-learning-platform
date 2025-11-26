@@ -237,6 +237,54 @@ const CodeCheckPage = () => {
     }
   }
 
+  // Parse message content to detect and format code blocks
+  const parseMessageContent = (content) => {
+    const parts = []
+    const codeBlockRegex = /```(\w+)?\n([\s\S]*?)```/g
+    let lastIndex = 0
+    let match
+
+    while ((match = codeBlockRegex.exec(content)) !== null) {
+      // Add text before code block
+      if (match.index > lastIndex) {
+        const textContent = content.substring(lastIndex, match.index)
+        if (textContent.trim()) {
+          parts.push({
+            type: 'text',
+            content: textContent
+          })
+        }
+      }
+
+      // Add code block
+      parts.push({
+        type: 'code',
+        language: match[1] || 'python',
+        content: match[2].trim()
+      })
+
+      lastIndex = match.index + match[0].length
+    }
+
+    // Add remaining text
+    if (lastIndex < content.length) {
+      const textContent = content.substring(lastIndex)
+      if (textContent.trim()) {
+        parts.push({
+          type: 'text',
+          content: textContent
+        })
+      }
+    }
+
+    return parts.length > 0 ? parts : [{ type: 'text', content }]
+  }
+
+  const copyToClipboard = (text) => {
+    navigator.clipboard.writeText(text)
+    // You can add a toast notification here
+  }
+
   const handleAICheck = async () => {
     if (!code.trim()) {
       alert('Please enter your code first')
@@ -730,18 +778,49 @@ const CodeCheckPage = () => {
                 </div>
               </div>
             ) : (
-              chatHistory.map((msg, idx) => (
-                <div key={idx} className={`chat-message ${msg.role}`}>
-                  <div className="message-avatar">
-                    {msg.role === 'user' ? '👤' : '🤖'}
+              chatHistory.map((msg, idx) => {
+                const parsedContent = parseMessageContent(msg.content)
+                return (
+                  <div key={idx} className={`chat-message ${msg.role}`}>
+                    <div className="message-avatar">
+                      {msg.role === 'user' ? '👤' : '🤖'}
+                    </div>
+                    <div className="message-content">
+                      {parsedContent.map((part, i) => {
+                        if (part.type === 'code') {
+                          return (
+                            <div key={i} className="code-block-container">
+                              <div className="code-block-header">
+                                <span className="code-language">{part.language}</span>
+                                <button 
+                                  className="copy-code-btn"
+                                  onClick={() => copyToClipboard(part.content)}
+                                  title="Copy code"
+                                >
+                                  📋 Copy
+                                </button>
+                              </div>
+                              <pre className="code-block">
+                                <code className={`language-${part.language}`}>
+                                  {part.content}
+                                </code>
+                              </pre>
+                            </div>
+                          )
+                        } else {
+                          return (
+                            <div key={i} className="text-content">
+                              {part.content.split('\n').map((line, j) => (
+                                <p key={j}>{line || '\u00A0'}</p>
+                              ))}
+                            </div>
+                          )
+                        }
+                      })}
+                    </div>
                   </div>
-                  <div className="message-content">
-                    {msg.content.split('\n').map((line, i) => (
-                      <p key={i}>{line}</p>
-                    ))}
-                  </div>
-                </div>
-              ))
+                )
+              })
             )}
             {loadingChat && (
               <div className="chat-message assistant">
