@@ -658,12 +658,36 @@ const CodeCheckPage = () => {
                   
                   {/* Simple output (no test case) */}
                   {!runOutput.test_info && runOutput.success && (
-                    <div className="output-success">
-                      <pre>{runOutput.output || '(no output)'}</pre>
-                      {runOutput.run_time > 0 && (
-                        <p className="run-time">Runtime: {runOutput.run_time}ms</p>
+                    <>
+                      <div className="output-success">
+                        <pre>{runOutput.output || '(no output)'}</pre>
+                        {runOutput.run_time > 0 && (
+                          <p className="run-time">Runtime: {runOutput.run_time}ms</p>
+                        )}
+                      </div>
+                      
+                      {/* Show helpful hint if there's no output */}
+                      {(!runOutput.output || runOutput.output.trim() === '') && (
+                        <div className="hint-box info-box">
+                          <h4>💡 No Output Detected</h4>
+                          <p>Your code ran successfully but didn't produce any output. Here's how to fix it:</p>
+                          <ul>
+                            <li><strong>Make sure you have test code:</strong> Look for the <code>if __name__ == "__main__":</code> section in your code</li>
+                            <li><strong>Add print statements:</strong> Use <code>print()</code> to output your results</li>
+                            <li><strong>Modify test data:</strong> Change the example values in the test code to try different inputs</li>
+                            <li><strong>Or click Submit:</strong> Use the Submit button to run with official test cases</li>
+                          </ul>
+                          <div className="example-code">
+                            <strong>Example:</strong>
+                            <pre>{`# Test your code here
+if __name__ == "__main__":
+    sol = Solution()
+    result = sol.yourMethod([1, 2, 3])
+    print(result)  # Don't forget this!`}</pre>
+                          </div>
+                        </div>
                       )}
-                    </div>
+                    </>
                   )}
                   
                   {/* Error output */}

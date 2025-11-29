@@ -609,6 +609,89 @@
   font-weight: bold;
 }
 
+/* Hint Box for No Output */
+.hint-box.info-box {
+  background: linear-gradient(135deg, #667eea15 0%, #764ba215 100%);
+  border: 2px solid #667eea;
+  border-radius: 12px;
+  padding: 1.5rem;
+  margin-top: 1rem;
+}
+
+.hint-box.info-box h4 {
+  color: #667eea;
+  margin: 0 0 1rem 0;
+  font-size: 1.1rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.hint-box.info-box p {
+  color: var(--text-primary);
+  margin-bottom: 1rem;
+  line-height: 1.6;
+}
+
+.hint-box.info-box ul {
+  list-style: none;
+  padding: 0;
+  margin: 1rem 0;
+}
+
+.hint-box.info-box li {
+  padding: 0.75rem 1rem;
+  margin-bottom: 0.75rem;
+  background: var(--bg-primary);
+  border-radius: 8px;
+  border-left: 3px solid #667eea;
+  color: var(--text-primary);
+  line-height: 1.6;
+}
+
+.hint-box.info-box li strong {
+  color: #667eea;
+  font-weight: 600;
+}
+
+.hint-box.info-box code {
+  background: rgba(102, 126, 234, 0.1);
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+  font-size: 0.9em;
+  color: #667eea;
+  border: 1px solid rgba(102, 126, 234, 0.2);
+}
+
+.hint-box.info-box .example-code {
+  margin-top: 1.5rem;
+  padding: 1rem;
+  background: var(--bg-primary);
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+}
+
+.hint-box.info-box .example-code strong {
+  color: var(--text-primary);
+  display: block;
+  margin-bottom: 0.5rem;
+  font-weight: 600;
+}
+
+.hint-box.info-box .example-code pre {
+  margin: 0;
+  padding: 1rem;
+  background: var(--bg-secondary);
+  border-radius: 6px;
+  overflow-x: auto;
+  font-size: 0.9rem;
+  line-height: 1.5;
+  color: var(--text-primary);
+  border: 1px solid var(--border-color);
+}
+
 /* Test Results Display */
 .test-results {
   display: flex;
