@@ -62,4 +62,6 @@ htmlcov/
 .AppleDouble
 .LSOverride
 
+# Sensitive files
+PASSWORD
 

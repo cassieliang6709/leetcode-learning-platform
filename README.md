@@ -149,6 +149,7 @@ OPENAI_API_KEY=your_openai_api_key_here  # Optional
 - [Troubleshooting](TROUBLESHOOTING.md)
 - [Quick Fixes](QUICK_FIX.md)
 - [Startup Instructions](START_HERE.md)
+- [Deployment Guide](DEPLOYMENT_GUIDE.md) - 🚀 Deploy to Render + Vercel (Free)
 
 ## 🐛 Troubleshooting
 
