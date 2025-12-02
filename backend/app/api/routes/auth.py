@@ -40,6 +40,7 @@ async def register(user_data: UserCreate, db: AsyncSession = Depends(get_db)):
     new_user = User(
         username=user_data.username,
         email=user_data.email,
+        # avoid Plaintext Passwords to be stored in database        
         hashed_password=hashed_password
     )
     
