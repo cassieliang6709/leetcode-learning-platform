@@ -21,68 +21,9 @@ class CodeExecutionRequest(BaseModel):
     code: str
     language: str
     question_id: int = None
-    test_mode: bool = False  # True for test cases, False for simple run
 
 
-class TestCase(BaseModel):
-    input: str
-    expected: str
-
-
-class CodeRunResponse(BaseModel):
-    success: bool
-    output: str
-    error: str = None
-    compile_output: str = None
-    run_time: int = 0
-    memory: int = 0
-
-
-class TestResultResponse(BaseModel):
-    test_case_id: int
-    input: str
-    expected: str
-    actual: str
-    passed: bool
-    error: str = None
-    run_time: int = 0
-
-
-class CodeExecutionResponse(BaseModel):
-    mode: str  # "run" or "test"
-    result: CodeRunResponse = None
-    test_results: List[TestResultResponse] = None
-    summary: Dict[str, Any] = None
-
-
-class CustomTestRequest(BaseModel):
-    """Request for custom test cases"""
-    code: str
-    language: str
-    test_cases: List[TestCase]
-
-
-@router.post("/run", response_model=CodeExecutionResponse)
-async def run_code(
-    request: CodeExecutionRequest,
-    db: AsyncSession = Depends(get_db)
-):
-    """
-    Execute code without test cases (simple run)
-    """
-    if not request.code.strip():
-        raise HTTPException(status_code=400, detail="Code cannot be empty")
-    
-    result = await execute_user_code(
-        code=request.code,
-        language=request.language,
-        test_cases=None
-    )
-    
-    return result
-
-
-@router.post("/submit/{question_id}", response_model=CodeExecutionResponse)
+@router.post("/submit/{question_id}")
 async def submit_code(
     question_id: int,
     request: CodeExecutionRequest,
@@ -183,27 +124,6 @@ async def get_supported_languages():
         "languages": languages if languages else common,
         "default": "python"
     }
-
-
-@router.post("/test-custom")
-async def test_with_custom_cases(
-    request: CustomTestRequest
-):
-    """
-    Run code with custom test cases (for testing/debugging)
-    """
-    formatted_cases = [
-        {"input": tc.input, "expected": tc.expected}
-        for tc in request.test_cases
-    ]
-    
-    result = await execute_user_code(
-        code=request.code,
-        language=request.language,
-        test_cases=formatted_cases
-    )
-    
-    return result
 
 
 @router.get("/submissions/{user_id}/recent")

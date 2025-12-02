@@ -1,6 +1,7 @@
 import axios from 'axios'
 
-const API_BASE_URL = 'http://localhost:8000/api'
+// Use environment variable for production, fallback to localhost for development
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api'
 
 const apiClient = axios.create({
   baseURL: API_BASE_URL,
@@ -101,13 +102,6 @@ export const api = {
     }),
 
   // Code execution endpoints
-  runCode: (code, language) =>
-    apiClient.post('/execution/run', {
-      code,
-      language,
-      test_mode: false
-    }),
-  
   submitCode: (questionId, code, language) =>
     apiClient.post(`/execution/submit/${questionId}`, {
       code,
