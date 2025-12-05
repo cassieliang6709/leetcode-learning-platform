@@ -41,7 +41,7 @@ class SiliconFlowAI:
         if self.fallback_mode:
             return {
                 "success": True,
-                "content": "AI 功能暂未配置。请在 backend/.env 文件中添加 SILICONFLOW_API_KEY 以启用完整的 AI 辅导功能。\n\n当前您可以继续使用其他功能，如：\n- 查看题目描述和测试用例\n- 运行代码并查看测试结果\n- 查看参考答案和题解",
+                "content": "AI features are not yet configured. Please add SILICONFLOW_API_KEY to the backend/.env file to enable full AI tutoring functionality",
                 "usage": {}
             }
         
