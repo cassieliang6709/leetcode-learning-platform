@@ -44,7 +44,7 @@ class SiliconFlowAI:
                 "content": "AI features are not yet configured. Please add SILICONFLOW_API_KEY to the backend/.env file to enable full AI tutoring functionality",
                 "usage": {}
             }
-        
+        # configurate one para of request body
         payload = {
             "model": self.model,
             "messages": messages,
