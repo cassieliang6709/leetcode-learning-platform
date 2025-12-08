@@ -174,7 +174,7 @@ async def get_optimization_suggestion(
     
     return {
         "success": True,
-        "suggestion": opt_result["suggestions"],  # 使用单数以匹配前端期望
+        "suggestion": opt_result["suggestions"], 
         "question_title": question.title
     }
 
