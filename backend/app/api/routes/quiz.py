@@ -232,28 +232,3 @@ async def submit_quiz_attempt(
     }
 
 
-@router.get("/{question_id}/hint/{level}")
-async def get_hint(
-    question_id: int,
-    level: int,
-    db: AsyncSession = Depends(get_db)
-):
-    """Get hint for a question (multi-level)"""
-    result = await db.execute(select(QuizQuestion).where(QuizQuestion.id == question_id))
-    question = result.scalar_one_or_none()
-    if not question:
-        raise HTTPException(status_code=404, detail="Question not found")
-
-    hints = question.hints or []
-    if level < 1 or level > len(hints):
-        raise HTTPException(status_code=400, detail="Invalid hint level")
-
-    hint = hints[level - 1]
-    return {
-        "level": level,
-        "total_levels": len(hints),
-        "hint": hint,
-        "video_link": question.video_link if level == len(hints) else None
-    }
-
-

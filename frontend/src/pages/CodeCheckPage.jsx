@@ -27,6 +27,9 @@ const CodeCheckPage = () => {
   const [chatMessage, setChatMessage] = useState('')
   const [loadingChat, setLoadingChat] = useState(false)
   const [isChatMaximized, setIsChatMaximized] = useState(false)
+  const [isResultMaximized, setIsResultMaximized] = useState(false)
+  const [optimizationSuggestion, setOptimizationSuggestion] = useState(null)
+  const [loadingOptimization, setLoadingOptimization] = useState(false)
   
   // NeetCode 风格新增状态
   const [descWidth, setDescWidth] = useState('40%')
@@ -128,6 +131,7 @@ const CodeCheckPage = () => {
     setActiveTab('result')
     setTestResults(null)
     setAiSuggestion(null)
+    setOptimizationSuggestion(null)
     
     try {
       const response = await api.submitCode(questionId, code, language)
@@ -139,6 +143,9 @@ const CodeCheckPage = () => {
       if (hasFailed) {
         // Automatically get AI suggestion for failed tests
         fetchAiSuggestion(response.data.test_results)
+      } else {
+        // All tests passed - get optimization suggestions
+        fetchOptimizationSuggestion()
       }
       
       // Also save to code check history
@@ -176,6 +183,28 @@ const CodeCheckPage = () => {
       })
     } finally {
       setLoadingAiSuggestion(false)
+    }
+  }
+
+  const fetchOptimizationSuggestion = async () => {
+    if (!questionId || !code) return
+    
+    setLoadingOptimization(true)
+    try {
+      const response = await api.getOptimizationSuggestion(
+        questionId,
+        code,
+        language
+      )
+      setOptimizationSuggestion(response.data)
+    } catch (error) {
+      console.error('Error getting optimization suggestion:', error)
+      setOptimizationSuggestion({
+        success: false,
+        error: 'Failed to get optimization suggestion.'
+      })
+    } finally {
+      setLoadingOptimization(false)
     }
   }
 
@@ -578,6 +607,16 @@ const CodeCheckPage = () => {
           
           <div className="console-spacer"></div>
           
+          {activeTab === 'result' && (testResults || result) && (
+            <button 
+              className="maximize-result-btn"
+              onClick={() => setIsResultMaximized(true)}
+              title="Maximize results"
+            >
+              🔍
+            </button>
+          )}
+          
           <button 
             className="toggle-console-btn"
             onClick={() => setIsConsoleOpen(!isConsoleOpen)}
@@ -666,6 +705,39 @@ const CodeCheckPage = () => {
                       {!aiSuggestion && !loadingAiSuggestion && (
                         <div className="ai-suggestion-placeholder">
                           <p>AI is analyzing your code to provide helpful suggestions...</p>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Optimization Suggestions for Passed Tests */}
+                  {testResults.summary?.passed === testResults.summary?.total && (
+                    <div className="ai-suggestion-section optimization-section">
+                      <div className="ai-suggestion-header">
+                        <h4>🚀 Optimization Suggestions</h4>
+                        {loadingOptimization && <span className="loading-text">Analyzing...</span>}
+                      </div>
+                      
+                      {optimizationSuggestion && optimizationSuggestion.success && (
+                        <div className="ai-suggestion-content markdown-content">
+                          <ReactMarkdown
+                            remarkPlugins={[remarkGfm]}
+                            rehypePlugins={[rehypeHighlight]}
+                          >
+                            {optimizationSuggestion.suggestion}
+                          </ReactMarkdown>
+                        </div>
+                      )}
+                      
+                      {optimizationSuggestion && !optimizationSuggestion.success && (
+                        <div className="ai-suggestion-error">
+                          <p>{optimizationSuggestion.error}</p>
+                        </div>
+                      )}
+                      
+                      {!optimizationSuggestion && !loadingOptimization && (
+                        <div className="ai-suggestion-placeholder">
+                          <p>AI is analyzing your code to provide optimization tips...</p>
                         </div>
                       )}
                     </div>
@@ -891,6 +963,193 @@ const CodeCheckPage = () => {
             >
               {loadingChat ? '⏳' : '📤'}
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* ==================== 放大的结果窗口 ==================== */}
+      {isResultMaximized && (
+        <div className="result-maximized-overlay" onClick={() => setIsResultMaximized(false)}>
+          <div className="result-maximized-dialog" onClick={(e) => e.stopPropagation()}>
+            <div className="result-maximized-header">
+              <h3>📊 Test Results</h3>
+              <button 
+                className="close-maximized-btn"
+                onClick={() => setIsResultMaximized(false)}
+                title="Close"
+              >
+                ✕
+              </button>
+            </div>
+            
+            <div className="result-maximized-content">
+              {/* Test Results from Submit */}
+              {testResults && (
+                <div className="test-results">
+                  <div className={`result-summary ${testResults.summary?.passed === testResults.summary?.total ? 'success' : 'error'}`}>
+                    <h3>
+                      {testResults.summary?.passed === testResults.summary?.total ? '✅ Accepted' : '❌ Wrong Answer'}
+                    </h3>
+                    <p>
+                      {testResults.summary?.passed} / {testResults.summary?.total} test cases passed 
+                      ({testResults.summary?.pass_rate?.toFixed(1)}%)
+                    </p>
+                  </div>
+
+                  {/* AI Suggestion for Failed Tests */}
+                  {testResults.summary?.failed > 0 && (
+                    <div className="ai-suggestion-section">
+                      <div className="ai-suggestion-header">
+                        <h4>🤖 AI Suggestion</h4>
+                        {loadingAiSuggestion && <span className="loading-text">Analyzing...</span>}
+                      </div>
+                      
+                      {aiSuggestion && aiSuggestion.success && (
+                        <div className="ai-suggestion-content markdown-content">
+                          <ReactMarkdown
+                            remarkPlugins={[remarkGfm]}
+                            rehypePlugins={[rehypeHighlight]}
+                          >
+                            {aiSuggestion.suggestion}
+                          </ReactMarkdown>
+                        </div>
+                      )}
+                      
+                      {aiSuggestion && !aiSuggestion.success && (
+                        <div className="ai-suggestion-error">
+                          <p>{aiSuggestion.error}</p>
+                        </div>
+                      )}
+                      
+                      {!aiSuggestion && !loadingAiSuggestion && (
+                        <div className="ai-suggestion-placeholder">
+                          <p>AI is analyzing your code to provide helpful suggestions...</p>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Optimization Suggestions for Passed Tests */}
+                  {testResults.summary?.passed === testResults.summary?.total && (
+                    <div className="ai-suggestion-section optimization-section">
+                      <div className="ai-suggestion-header">
+                        <h4>🚀 Optimization Suggestions</h4>
+                        {loadingOptimization && <span className="loading-text">Analyzing...</span>}
+                      </div>
+                      
+                      {optimizationSuggestion && optimizationSuggestion.success && (
+                        <div className="ai-suggestion-content markdown-content">
+                          <ReactMarkdown
+                            remarkPlugins={[remarkGfm]}
+                            rehypePlugins={[rehypeHighlight]}
+                          >
+                            {optimizationSuggestion.suggestion}
+                          </ReactMarkdown>
+                        </div>
+                      )}
+                      
+                      {optimizationSuggestion && !optimizationSuggestion.success && (
+                        <div className="ai-suggestion-error">
+                          <p>{optimizationSuggestion.error}</p>
+                        </div>
+                      )}
+                      
+                      {!optimizationSuggestion && !loadingOptimization && (
+                        <div className="ai-suggestion-placeholder">
+                          <p>AI is analyzing your code to provide optimization tips...</p>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  <div className="test-cases-results">
+                    {testResults.test_results?.map((result, index) => (
+                      <div key={index} className={`test-result-item ${result.passed ? 'passed' : 'failed'}`}>
+                        <div className="test-result-header">
+                          <h4>
+                            {result.passed ? '✅' : '❌'} Test Case {result.test_case_id}
+                          </h4>
+                          {result.run_time > 0 && (
+                            <span className="run-time">{result.run_time}ms</span>
+                          )}
+                        </div>
+                        <div className="test-result-content">
+                          <div className="test-detail">
+                            <strong>Input:</strong>
+                            <pre>{result.input}</pre>
+                          </div>
+                          <div className="test-detail">
+                            <strong>Expected:</strong>
+                            <pre>{result.expected}</pre>
+                          </div>
+                          <div className="test-detail">
+                            <strong>Your Output:</strong>
+                            <pre className={result.passed ? 'correct' : 'incorrect'}>
+                              {result.actual || '(no output)'}
+                            </pre>
+                          </div>
+                          {result.error && (
+                            <div className="test-error">
+                              <strong>Error:</strong>
+                              <pre>{result.error}</pre>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* AI Analysis Result */}
+              {result && !testResults && (
+                <div className={`result-card ${getResultClass()}`}>
+                  <div className="result-header">
+                    {result.has_errors ? (
+                      <h4>❌ Issues Found</h4>
+                    ) : (
+                      <h4>✅ Code Looks Good!</h4>
+                    )}
+                  </div>
+
+                  {result.errors && result.errors.length > 0 && (
+                    <div className="result-section">
+                      <h5>Errors:</h5>
+                      <ul className="error-list">
+                        {result.errors.map((error, index) => (
+                          <li key={index}>{error}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+
+                  {result.suggestions && result.suggestions.length > 0 && (
+                    <div className="result-section">
+                      <h5>💡 Suggestions:</h5>
+                      <ul className="suggestion-list">
+                        {result.suggestions.map((suggestion, index) => (
+                          <li key={index}>{suggestion}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+
+                  {result.corrected_code && (
+                    <div className="result-section">
+                      <h5>✨ Corrected Code:</h5>
+                      <pre className="corrected-code">{result.corrected_code}</pre>
+                    </div>
+                  )}
+
+                  {result.complexity_analysis && (
+                    <div className="result-section">
+                      <h5>⚡ Complexity:</h5>
+                      <p>{result.complexity_analysis}</p>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
         </div>
       )}
