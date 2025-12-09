@@ -32,7 +32,7 @@ function AppContent() {
           <nav className="navbar">
             <div className="nav-container">
               <div className="nav-left">
-                <h1 className="logo">💻 LeetCode Master</h1>
+                <h1 className="logo">💻 AlgoMentor</h1>
               </div>
               <div className="nav-right">
                 <div className="nav-links">

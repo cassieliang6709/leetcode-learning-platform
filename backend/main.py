@@ -18,7 +18,7 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(
-    title="LeetCode Learning Platform",
+    title="AlgoMentor",
     description="AI-powered algorithm learning platform",
     version="1.0.0",
     lifespan=lifespan
@@ -49,7 +49,7 @@ app.include_router(ai_assistant.router, prefix="/api/ai", tags=["ai-assistant"])
 
 @app.get("/")
 async def root():
-    return {"message": "LeetCode Learning Platform API", "status": "running"}
+    return {"message": "AlgoMentor API", "status": "running"}
 
 
 @app.get("/health")

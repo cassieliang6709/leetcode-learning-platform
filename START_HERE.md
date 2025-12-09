@@ -1,6 +1,6 @@
 # 🚀 从这里开始
 
-欢迎使用 **LeetCode Learning Platform**！
+欢迎使用 **AlgoMentor**！
 
 ## ⚡ 最快启动方式（推荐）
 

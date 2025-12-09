@@ -5,7 +5,7 @@ GREEN='\033[0;32m'
 RED='\033[0;31m'
 NC='\033[0m'
 
-echo "🛑 停止 LeetCode Learning Platform..."
+echo "🛑 停止 AlgoMentor..."
 
 # 停止后端
 if [ -f /tmp/leetcode_backend.pid ]; then
