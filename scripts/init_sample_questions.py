@@ -19,73 +19,73 @@ from app.models import QuizQuestion, KnowledgePoint
 SAMPLE_QUESTIONS = [
     {
         "knowledge_point_name": "Array",
-        "title": "两数之和 (Two Sum)",
-        "description": "给定一个整数数组 nums 和一个整数目标值 target，请你在该数组中找出和为目标值 target 的那两个整数，并返回它们的数组下标。",
+        "title": "Two Sum",
+        "description": "Given an array of integers nums and an integer target, return indices of the two numbers such that they add up to target.",
         "difficulty": "easy",
         "options": [
-            "使用暴力循环遍历所有可能的组合",
-            "使用哈希表存储已遍历的元素及其索引",
-            "先排序数组，然后使用双指针",
-            "使用递归方法查找"
+            "Use brute force to iterate through all possible combinations",
+            "Use hash table to store traversed elements and their indices",
+            "Sort the array first, then use two pointers",
+            "Use recursive method to find"
         ],
         "correct_answer": 1,
-        "explanation": "使用哈希表可以在O(n)时间复杂度内解决问题，空间复杂度为O(n)。"
+        "explanation": "Using a hash table can solve the problem in O(n) time complexity, with O(n) space complexity."
     },
     {
         "knowledge_point_name": "String",
-        "title": "最长回文子串 (Longest Palindromic Substring)",
-        "description": "给你一个字符串 s，找到 s 中最长的回文子串。",
+        "title": "Longest Palindromic Substring",
+        "description": "Given a string s, return the longest palindromic substring in s.",
         "difficulty": "medium",
         "options": [
-            "暴力枚举所有子串并检查是否回文",
-            "使用动态规划记录子串是否为回文",
-            "从中心向两边扩展寻找回文",
-            "使用哈希表记录字符出现位置"
+            "Brute force enumerate all substrings and check if palindrome",
+            "Use dynamic programming to record if substring is palindrome",
+            "Expand from center to find palindrome",
+            "Use hash table to record character positions"
         ],
         "correct_answer": 2,
-        "explanation": "中心扩展法是最常用的方法，时间复杂度O(n²)，空间复杂度O(1)。"
+        "explanation": "Center expansion is the most common method, with O(n²) time complexity and O(1) space complexity."
     },
     {
         "knowledge_point_name": "Linked List",
-        "title": "反转链表 (Reverse Linked List)",
-        "description": "给你单链表的头节点 head ，请你反转链表，并返回反转后的链表。",
+        "title": "Reverse Linked List",
+        "description": "Given the head of a singly linked list, reverse the list, and return the reversed list.",
         "difficulty": "easy",
         "options": [
-            "使用递归方法反转",
-            "使用栈存储所有节点再重建",
-            "使用双指针迭代反转",
-            "创建新链表并复制节点"
+            "Use recursive method to reverse",
+            "Use stack to store all nodes then rebuild",
+            "Use two pointers to iterate and reverse",
+            "Create new linked list and copy nodes"
         ],
         "correct_answer": 2,
-        "explanation": "双指针迭代法最优，时间复杂度O(n)，空间复杂度O(1)。"
+        "explanation": "Two-pointer iteration is optimal, with O(n) time complexity and O(1) space complexity."
     },
     {
         "knowledge_point_name": "Binary Tree",
-        "title": "二叉树的最大深度",
-        "description": "给定一个二叉树 root ，返回其最大深度。",
+        "title": "Maximum Depth of Binary Tree",
+        "description": "Given the root of a binary tree, return its maximum depth.",
         "difficulty": "easy",
         "options": [
-            "使用深度优先搜索(DFS)递归计算",
-            "使用广度优先搜索(BFS)层序遍历",
-            "使用栈模拟递归过程",
-            "使用队列记录每层节点数"
+            "Use depth-first search (DFS) recursive calculation",
+            "Use breadth-first search (BFS) level-order traversal",
+            "Use stack to simulate recursive process",
+            "Use queue to record number of nodes per level"
         ],
         "correct_answer": 0,
-        "explanation": "DFS递归是最简洁的方法：max_depth = max(left, right) + 1"
+        "explanation": "DFS recursion is the most concise method: max_depth = max(left, right) + 1"
     },
     {
         "knowledge_point_name": "Dynamic Programming",
-        "title": "爬楼梯 (Climbing Stairs)",
-        "description": "假设你正在爬楼梯。需要 n 阶你才能到达楼顶。每次你可以爬 1 或 2 个台阶。你有多少种不同的方法可以爬到楼顶呢？",
+        "title": "Climbing Stairs",
+        "description": "You are climbing a staircase. It takes n steps to reach the top. Each time you can either climb 1 or 2 steps. In how many distinct ways can you climb to the top?",
         "difficulty": "easy",
         "options": [
-            "使用递归直接计算",
-            "使用动态规划，dp[i] = dp[i-1] + dp[i-2]",
-            "使用贪心算法选择最优步数",
-            "使用回溯法枚举所有可能"
+            "Use recursion to calculate directly",
+            "Use dynamic programming, dp[i] = dp[i-1] + dp[i-2]",
+            "Use greedy algorithm to choose optimal steps",
+            "Use backtracking to enumerate all possibilities"
         ],
         "correct_answer": 1,
-        "explanation": "这是经典的斐波那契数列问题，使用DP可以避免重复计算。"
+        "explanation": "This is a classic Fibonacci sequence problem. Using DP can avoid repeated calculations."
     }
 ]
 

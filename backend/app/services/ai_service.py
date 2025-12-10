@@ -90,27 +90,27 @@ async def analyze_code(code: str, language: str) -> Dict[str, Any]:
     
     try:
         # Construct prompt for AI code review
-        prompt = f"""你是一位专业的代码审查专家。请分析以下 {language} 代码，并提供：
-1. 代码中的错误（如果有）
-2. 改进建议
-3. 优化后的代码（如果需要）
-4. 时间和空间复杂度分析
+        prompt = f"""You are a professional code review expert. Please analyze the following {language} code and provide:
+1. Errors in the code (if any)
+2. Improvement suggestions
+3. Optimized code (if needed)
+4. Time and space complexity analysis
 
-代码：
+Code:
 ```{language}
 {code}
 ```
 
-请以 JSON 格式返回结果，格式如下：
+Please return the result in JSON format as follows:
 {{
   "has_errors": true/false,
-  "errors": ["错误1", "错误2"],
-  "suggestions": ["建议1", "建议2"],
-  "corrected_code": "优化后的代码（如果需要）",
-  "complexity_analysis": "时间复杂度和空间复杂度分析"
+  "errors": ["error1", "error2"],
+  "suggestions": ["suggestion1", "suggestion2"],
+  "corrected_code": "optimized code (if needed)",
+  "complexity_analysis": "time and space complexity analysis"
 }}
 
-只返回 JSON，不要其他内容。"""
+Return only JSON, no other content."""
 
         async with httpx.AsyncClient(timeout=30.0) as client:
             response = await client.post(
@@ -124,7 +124,7 @@ async def analyze_code(code: str, language: str) -> Dict[str, Any]:
                     "messages": [
                         {
                             "role": "system",
-                            "content": "你是一位专业的代码审查助手，擅长发现代码问题并提供改进建议。"
+                            "content": "You are a professional code review assistant, skilled at finding code issues and providing improvement suggestions."
                         },
                         {
                             "role": "user",
@@ -156,7 +156,7 @@ async def analyze_code(code: str, language: str) -> Dict[str, Any]:
                             "errors": [],
                             "suggestions": [ai_response],
                             "corrected_code": None,
-                            "complexity_analysis": "请参考建议"
+                            "complexity_analysis": "Please refer to suggestions"
                         }
                 except json.JSONDecodeError:
                     # Fallback if JSON parsing fails
@@ -165,7 +165,7 @@ async def analyze_code(code: str, language: str) -> Dict[str, Any]:
                         "errors": [],
                         "suggestions": [ai_response],
                         "corrected_code": None,
-                        "complexity_analysis": "分析中..."
+                        "complexity_analysis": "Analyzing..."
                     }
             else:
                 print(f"API Error: {response.status_code} - {response.text}")
@@ -184,19 +184,19 @@ async def _simple_code_analysis(code: str, language: str) -> Dict[str, Any]:
 
     if language == "python":
         if "def " not in code and "class " not in code:
-            errors.append("代码中未找到函数或类定义")
+            errors.append("No function or class definition found in code")
             has_errors = True
         if "return" not in code and "def " in code:
-            suggestions.append("考虑添加 return 语句")
+            suggestions.append("Consider adding a return statement")
         if re.search(r'if.*==.*None', code):
-            suggestions.append("建议使用 'if x is None' 而不是 'if x == None'")
+            suggestions.append("Consider using 'if x is None' instead of 'if x == None'")
     
     return {
         "has_errors": has_errors,
         "errors": errors,
-        "suggestions": suggestions if suggestions else ["代码看起来不错！"],
+        "suggestions": suggestions if suggestions else ["Code looks good!"],
         "corrected_code": None,
-        "complexity_analysis": "请使用 AI 分析获取详细的复杂度信息"
+        "complexity_analysis": "Please use AI analysis to get detailed complexity information"
     }
 
 

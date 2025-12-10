@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Fix method definitions to include 'self' parameter
-修复方法定义，添加 self 参数
+Fix method definitions by adding self parameter
 """
 import os
 import sys
@@ -21,23 +21,23 @@ DB_CONFIG = {
 
 
 def fix_python_code(code: str, method_name: str) -> str:
-    """修复 Python 代码，确保方法有 self 参数并正确缩进"""
+    """Fix Python code to ensure methods have self parameter and correct indentation"""
     
-    # 找到方法定义行
+    # Find method definition line
     pattern = rf'def {method_name}\s*\('
     match = re.search(pattern, code)
     
     if not match:
         return code
     
-    # 检查是否已经有 self
+    # Check if already has self
     method_line_start = match.start()
     method_line_end = code.find(')', method_line_start)
     method_signature = code[method_line_start:method_line_end + 1]
     
-    # 如果没有 self，添加它
+    # If no self, add it
     if 'self' not in method_signature.split('(')[1].split(',')[0]:
-        # 替换方法定义
+        # Replace method definition
         new_signature = method_signature.replace(f'def {method_name}(', f'def {method_name}(self, ')
         code = code[:method_line_start] + new_signature + code[method_line_end + 1:]
     
@@ -45,13 +45,13 @@ def fix_python_code(code: str, method_name: str) -> str:
 
 
 def update_database():
-    """更新数据库中的代码"""
+    """Update code in database"""
     
     conn = psycopg2.connect(**DB_CONFIG)
     cursor = conn.cursor(cursor_factory=RealDictCursor)
     
     try:
-        # 获取所有有 starter_code 的题目
+        # Get all questions with starter_code
         cursor.execute("""
             SELECT id, leetcode_id, title, starter_code 
             FROM quiz_questions 
@@ -74,18 +74,18 @@ def update_database():
             
             python_code = starter_code['python']
             
-            # 检查是否需要修复
+            # Check if needs fixing
             if 'def ' not in python_code or 'if __name__' not in python_code:
                 continue
             
-            # 提取方法名
+            # Extract method name
             match = re.search(r'def\s+(\w+)\s*\(', python_code)
             if not match:
                 continue
             
             method_name = match.group(1)
             
-            # 检查是否缺少 self
+            # Check if missing self
             if f'def {method_name}(' in python_code:
                 params_part = python_code.split(f'def {method_name}(')[1].split(')')[0]
                 first_param = params_part.split(',')[0].strip()
@@ -95,10 +95,10 @@ def update_database():
                     print(f"  Method: {method_name}")
                     print(f"  First param: {first_param}")
                     
-                    # 修复代码
+                    # Fix code
                     fixed_code = fix_python_code(python_code, method_name)
                     
-                    # 更新
+                    # Update
                     new_starter_code = starter_code.copy()
                     new_starter_code['python'] = fixed_code
                     

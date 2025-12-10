@@ -59,7 +59,7 @@ class SiliconFlowAI:
                     self.api_url,
                     headers=self.headers,
                     json=payload,
-                    timeout=aiohttp.ClientTimeout(total=60)  # 增加到60秒，优化建议需要更长时间
+                    timeout=aiohttp.ClientTimeout(total=60)  # Increased to 60 seconds, optimization suggestions need more time
                 ) as response:
                     if response.status == 200:
                         result = await response.json()

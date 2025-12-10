@@ -1,5 +1,5 @@
 #!/bin/bash
-# 单独启动前端服务
+# Start frontend service only
 
 set -e
 
@@ -9,19 +9,19 @@ GREEN='\033[0;32m'
 BLUE='\033[0;34m'
 NC='\033[0m'
 
-echo -e "${BLUE}🎨 启动前端服务...${NC}"
+echo -e "${BLUE}🎨 Starting frontend service...${NC}"
 
 cd "$PROJECT_ROOT/frontend"
 
-# 安装依赖
+# Install dependencies
 if [ ! -d "node_modules" ]; then
-    echo -e "${BLUE}📦 安装依赖...${NC}"
+    echo -e "${BLUE}📦 Installing dependencies...${NC}"
     npm install
 fi
 
-# 启动服务
-echo -e "${GREEN}✅ 前端服务启动中...${NC}"
-echo -e "${BLUE}📱 访问地址: http://localhost:5173${NC}"
+# Start service
+echo -e "${GREEN}✅ Frontend service starting...${NC}"
+echo -e "${BLUE}📱 Access URL: http://localhost:5173${NC}"
 
 npm run dev
 

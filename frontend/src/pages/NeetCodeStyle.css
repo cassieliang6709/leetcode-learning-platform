@@ -1,8 +1,8 @@
 /* ==========================================
-   NeetCode 风格布局 - 浅色主题
+   NeetCode Style Layout - Light Theme
    ========================================== */
 
-/* 重置和基础样式 */
+/* Reset and Base Styles */
 * {
   box-sizing: border-box;
 }
@@ -17,7 +17,7 @@
   position: relative;
 }
 
-/* ==================== 题目列表侧边抽屉 ==================== */
+/* ==================== Problem List Side Drawer ==================== */
 .drawer-overlay {
   position: fixed;
   top: 0;
@@ -140,7 +140,7 @@
   font-weight: 500;
 }
 
-/* ==================== 顶部工具栏 ==================== */
+/* ==================== Top Toolbar ==================== */
 .top-toolbar {
   display: flex;
   align-items: center;
@@ -307,7 +307,7 @@
   cursor: not-allowed;
 }
 
-/* ==================== 水平分屏区域 ==================== */
+/* ==================== Horizontal Split Pane ==================== */
 .split-pane {
   display: flex;
   flex: 1;
@@ -315,7 +315,7 @@
   position: relative;
 }
 
-/* 左侧：题目描述 */
+/* Left: Problem Description */
 .description-pane {
   display: flex;
   flex-direction: column;
@@ -332,7 +332,7 @@
   flex: 1;
 }
 
-/* 题目描述样式 */
+/* Problem Description Styles */
 .problem-description {
   color: #374151;
   line-height: 1.7;
@@ -415,7 +415,7 @@
   color: #374151;
 }
 
-/* ==================== Hints 区域（可折叠）==================== */
+/* ==================== Hints Section (Collapsible) ==================== */
 .hints-section {
   margin-top: 2rem;
   border-top: 1px solid #3e3e42;
@@ -540,7 +540,7 @@
   background: #c0392b;
 }
 
-/* 拖拽分隔条 */
+/* Drag Resizer */
 .resizer {
   width: 4px;
   background: #e5e7eb;
@@ -555,7 +555,7 @@
   background: #3b82f6;
 }
 
-/* 右侧：代码编辑器 */
+/* Right: Code Editor */
 .editor-pane {
   flex: 1;
   background: #ffffff;
@@ -564,7 +564,7 @@
   flex-direction: column;
 }
 
-/* ==================== 底部控制台 ==================== */
+/* ==================== Bottom Console ==================== */
 .console-panel {
   background: #f8f9fa;
   border-top: 1px solid #e5e7eb;
@@ -639,7 +639,7 @@
   padding: 1rem;
 }
 
-/* 测试用例样式 */
+/* Test Case Styles */
 .testcases-panel,
 .results-panel {
   height: 100%;
@@ -695,7 +695,7 @@
   color: #1a1a1a;
 }
 
-/* 测试结果 */
+/* Test Results */
 .test-results {
   display: flex;
   flex-direction: column;
@@ -755,7 +755,7 @@
   border-left: 3px solid #ef4444;
 }
 
-/* ==================== AI 建议区域（重点优化）==================== */
+/* ==================== AI Suggestions Area (Key Optimization) ==================== */
 .ai-suggestion-section {
   margin: 1.5rem 0;
   background: linear-gradient(135deg, #eff6ff 0%, #f0f9ff 100%);
@@ -765,7 +765,7 @@
   box-shadow: 0 4px 12px rgba(59, 130, 246, 0.15);
 }
 
-/* 优化建议区域特殊样式 */
+/* Special Styles for Optimization Suggestions Area */
 .ai-suggestion-section.optimization-section {
   background: linear-gradient(135deg, #f0fdf4 0%, #ecfdf5 100%);
   border: 2px solid #10b981;
@@ -1000,7 +1000,7 @@
   color: #6b7280;
 }
 
-/* ==================== AI 助手浮动按钮 ==================== */
+/* ==================== AI Assistant Floating Button ==================== */
 .floating-ai-btn {
   position: fixed;
   bottom: 2rem;
@@ -1196,7 +1196,7 @@
   cursor: not-allowed;
 }
 
-/* ==================== 响应式设计 ==================== */
+/* ==================== Responsive Design ==================== */
 @media (max-width: 1200px) {
   .split-pane {
     flex-direction: column;
@@ -1270,7 +1270,7 @@
   }
 }
 
-/* Loading 状态 */
+/* Loading State */
 .loading-spinner {
   display: inline-block;
   width: 14px;
@@ -1285,7 +1285,7 @@
   to { transform: rotate(360deg); }
 }
 
-/* Markdown 内容样式（在聊天中）*/
+/* Markdown Content Styles (in chat) */
 .markdown-content {
   line-height: 1.6;
 }
@@ -1402,7 +1402,7 @@
   font-style: italic;
 }
 
-/* ==================== 放大结果按钮 ==================== */
+/* ==================== Maximize Result Button ==================== */
 .maximize-result-btn {
   background: transparent;
   border: none;
@@ -1419,7 +1419,7 @@
   background: #f3f4f6;
 }
 
-/* ==================== 放大结果窗口 ==================== */
+/* ==================== Maximized Result Window ==================== */
 .result-maximized-overlay {
   position: fixed;
   top: 0;
@@ -1502,7 +1502,7 @@
   background: #f9fafb;
 }
 
-/* 放大窗口内的结果样式 */
+/* Result Styles in Maximized Window */
 .result-maximized-content .test-results {
   max-width: 1200px;
   margin: 0 auto;
@@ -1543,7 +1543,7 @@
   padding: 1.5rem;
 }
 
-/* 放大窗口内的 AI Analysis Result 样式 */
+/* AI Analysis Result Styles in Maximized Window */
 .result-maximized-content .result-card {
   max-width: 1200px;
   margin: 0 auto;
@@ -1580,7 +1580,7 @@
   line-height: 1.6;
 }
 
-/* 响应式样式 */
+/* Responsive Styles */
 @media (max-width: 768px) {
   .result-maximized-overlay {
     padding: 0;

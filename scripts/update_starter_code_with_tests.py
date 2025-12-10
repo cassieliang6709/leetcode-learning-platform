@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Update starter_code to include test framework
-添加测试代码框架，使代码能够从 stdin 读取输入并输出结果
+Add test code framework to enable reading input from stdin and outputting results
 """
 import os
 import sys
@@ -20,9 +20,9 @@ DB_CONFIG = {
 
 
 def get_method_name_from_code(code: str, language: str = "python") -> str:
-    """从代码中提取方法名"""
+    """Extract method name from code"""
     if language == "python":
-        # 查找 "def method_name(" 模式
+        # Find "def method_name(" pattern
         import re
         match = re.search(r'def\s+(\w+)\s*\(', code)
         if match:
@@ -36,26 +36,26 @@ def get_method_name_from_code(code: str, language: str = "python") -> str:
 
 def create_python_starter_with_tests(original_code: str, method_name: str, test_cases: list) -> str:
     """
-    创建包含测试框架的 Python starter code
+    Create Python starter code with test framework
     
     Args:
-        original_code: 原始的函数定义
-        method_name: 方法名
-        test_cases: 测试用例列表
+        original_code: Original function definition
+        method_name: Method name
+        test_cases: List of test cases
     
     Returns:
-        完整的可运行代码
+        Complete runnable code
     """
     
-    # 添加必要的 imports
+    # Add necessary imports
     imports = "from typing import List, Dict, Optional, Set, Tuple, Any\nimport sys\nimport json\n\n"
     
-    # 包装成 Solution 类
+    # Wrap in Solution class
     class_code = f"""class Solution:
     {original_code.replace('def ', 'def ', 1).replace(original_code.split('(')[0], '    def ' + method_name)}
 """
     
-    # 添加测试代码
+    # Add test code
     test_code = f"""
 
 # Test code - reads from stdin and outputs result
@@ -95,19 +95,19 @@ if __name__ == "__main__":
 
 def create_simple_python_starter(original_code: str, method_name: str) -> str:
     """
-    创建简单的可运行 Python 代码（不依赖 stdin）
-    用户可以直接修改测试数据
+    Create simple runnable Python code (does not depend on stdin)
+    Users can directly modify test data
     """
     
     imports = "from typing import List, Dict, Optional, Set, Tuple, Any\n\n"
     
-    # 修复方法定义：添加 self 参数（如果缺少）
+    # Fix method definition: add self parameter (if missing)
     fixed_code = original_code.strip()
     if f"def {method_name}(" in fixed_code and "self" not in fixed_code.split("def " + method_name + "(")[1].split(")")[0].split(",")[0]:
-        # 在方法参数中添加 self
+        # Add self to method parameters
         fixed_code = fixed_code.replace(f"def {method_name}(", f"def {method_name}(self, ")
     
-    # 包装成 Solution 类，确保正确缩进
+    # Wrap in Solution class, ensure correct indentation
     lines = fixed_code.split('\n')
     indented_lines = ['    ' + line if line.strip() else line for line in lines]
     class_code = f"""class Solution:
@@ -135,13 +135,13 @@ if __name__ == "__main__":
 
 
 def update_database():
-    """更新数据库中的 starter_code"""
+    """Update starter_code in database"""
     
     conn = psycopg2.connect(**DB_CONFIG)
     cursor = conn.cursor(cursor_factory=RealDictCursor)
     
     try:
-        # 获取所有有 starter_code 的题目
+        # Get all questions with starter_code
         cursor.execute("""
             SELECT id, leetcode_id, title, starter_code, test_cases 
             FROM quiz_questions 
@@ -162,16 +162,16 @@ def update_database():
             
             print(f"\nProcessing: #{question['leetcode_id']} - {title}")
             
-            # 只更新 Python 代码
+            # Only update Python code
             if 'python' in starter_code:
                 original_python = starter_code['python']
                 
-                # 检查是否已经包含测试代码
+                # Check if already contains test code
                 if 'if __name__ == "__main__":' in original_python:
                     print(f"  ✓ Already has test code, skipping...")
                     continue
                 
-                # 提取方法名
+                # Extract method name
                 method_name = get_method_name_from_code(original_python, 'python')
                 
                 if not method_name:
@@ -180,14 +180,14 @@ def update_database():
                 
                 print(f"  → Method name: {method_name}")
                 
-                # 创建新的 starter code（使用简单版本，更适合用户测试）
+                # Create new starter code (use simple version, more suitable for user testing)
                 new_python_code = create_simple_python_starter(original_python, method_name)
                 
-                # 更新 starter_code
+                # Update starter_code
                 new_starter_code = starter_code.copy()
                 new_starter_code['python'] = new_python_code
                 
-                # 保存到数据库
+                # Save to database
                 cursor.execute("""
                     UPDATE quiz_questions 
                     SET starter_code = %s

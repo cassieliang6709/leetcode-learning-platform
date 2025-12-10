@@ -31,7 +31,7 @@ const CodeCheckPage = () => {
   const [optimizationSuggestion, setOptimizationSuggestion] = useState(null)
   const [loadingOptimization, setLoadingOptimization] = useState(false)
   
-  // NeetCode 风格新增状态
+  // NeetCode style additional states
   const [descWidth, setDescWidth] = useState('40%')
   const [isConsoleOpen, setIsConsoleOpen] = useState(true)
   const [hintsExpanded, setHintsExpanded] = useState(false)
@@ -259,7 +259,7 @@ const CodeCheckPage = () => {
     // You can add a toast notification here
   }
 
-  // 拖拽调整大小
+  // Drag to resize
   const handleResizeMouseDown = (e) => {
     e.preventDefault()
     setIsResizing(true)
@@ -355,7 +355,7 @@ const CodeCheckPage = () => {
 
   return (
     <div className="neetcode-layout">
-      {/* ==================== 题目列表侧边抽屉 ==================== */}
+      {/* ==================== Problem List Side Drawer ==================== */}
       {showProblemsDrawer && (
         <>
           <div className="drawer-overlay" onClick={() => setShowProblemsDrawer(false)}></div>
@@ -395,11 +395,11 @@ const CodeCheckPage = () => {
         </>
       )}
 
-      {/* ==================== 顶部工具栏 ==================== */}
+      {/* ==================== Top Toolbar ==================== */}
       <div className="top-toolbar">
         <button 
           className="menu-btn" 
-          title="题目列表"
+          title="Problem List"
           onClick={() => setShowProblemsDrawer(true)}
         >
           ☰
@@ -419,11 +419,11 @@ const CodeCheckPage = () => {
         
         <div className="toolbar-spacer"></div>
         
-        {/* 快捷按钮 */}
+        {/* Quick action buttons */}
         <button 
           className="icon-btn hint-btn"
           onClick={() => setHintsExpanded(!hintsExpanded)}
-          title="查看提示"
+          title="View Hints"
         >
           💡 Hints ({Object.keys(hints).length}/3)
         </button>
@@ -431,7 +431,7 @@ const CodeCheckPage = () => {
         <button 
           className="icon-btn ai-btn"
           onClick={() => setShowChatDialog(true)}
-          title="AI 助手"
+          title="AI Assistant"
         >
           🤖 AI
         </button>
@@ -458,13 +458,13 @@ const CodeCheckPage = () => {
         </button>
       </div>
 
-      {/* ==================== 水平分屏区域 ==================== */}
+      {/* ==================== Horizontal Split Pane ==================== */}
       <div className="split-pane" ref={splitPaneRef}>
-        {/* 左侧：题目描述 + Hints */}
+        {/* Left: Problem Description + Hints */}
         <div className="description-pane" style={{ width: descWidth }}>
           {selectedProblem && (
             <div className="description-content">
-              {/* 题目描述 */}
+              {/* Problem Description */}
               <div className="problem-description">
                 <div className="description-text">
                   {selectedProblem.description}
@@ -487,7 +487,7 @@ const CodeCheckPage = () => {
                 )}
               </div>
               
-              {/* ============ Hints 区域（可折叠）============ */}
+              {/* ============ Hints Section (Collapsible) ============ */}
               <div className="hints-section">
                 <button 
                   className="hints-header"
@@ -551,14 +551,14 @@ const CodeCheckPage = () => {
           )}
         </div>
 
-        {/* 拖拽分隔条 */}
+        {/* Drag Resizer */}
         <div 
           className={`resizer ${isResizing ? 'resizing' : ''}`}
           ref={resizerRef}
           onMouseDown={handleResizeMouseDown}
         ></div>
 
-        {/* 右侧：Monaco Editor */}
+        {/* Right: Monaco Editor */}
         <div className="editor-pane">
           {selectedProblem && (
             <Editor
@@ -589,7 +589,7 @@ const CodeCheckPage = () => {
         </div>
       </div>
 
-      {/* ==================== 底部控制台 ==================== */}
+      {/* ==================== Bottom Console ==================== */}
       <div className={`console-panel ${isConsoleOpen ? 'open' : 'closed'}`}>
         <div className="console-tabs">
           <button 
@@ -842,12 +842,12 @@ const CodeCheckPage = () => {
         )}
       </div>
 
-      {/* ==================== AI 助手浮动按钮 ==================== */}
+      {/* ==================== AI Assistant Floating Button ==================== */}
       {questionId && (
         <button 
           className="floating-ai-btn"
           onClick={() => setShowChatDialog(!showChatDialog)}
-          title="AI 助手"
+          title="AI Assistant"
         >
           🤖
         </button>
@@ -967,7 +967,7 @@ const CodeCheckPage = () => {
         </div>
       )}
 
-      {/* ==================== 放大的结果窗口 ==================== */}
+      {/* ==================== Maximized Result Window ==================== */}
       {isResultMaximized && (
         <div className="result-maximized-overlay" onClick={() => setIsResultMaximized(false)}>
           <div className="result-maximized-dialog" onClick={(e) => e.stopPropagation()}>

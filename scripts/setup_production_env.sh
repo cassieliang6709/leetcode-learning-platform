@@ -3,7 +3,7 @@
 # Setup Production Environment Configuration Script
 # This script helps you create the .env.production file for frontend deployment
 
-echo "🚀 LeetCode Learning Platform - Production Environment Setup"
+echo "🚀 AlgoMentor - Production Environment Setup"
 echo "==========================================================="
 echo ""
 

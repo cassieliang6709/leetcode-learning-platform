@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
 """
-数据库初始化脚本
-创建表结构并插入基础数据
+Database initialization script
+Create table structure and insert basic data
 """
 
 import asyncio
 import sys
 from pathlib import Path
 
-# 添加 backend 目录到 Python 路径
+# Add backend directory to Python path
 backend_dir = Path(__file__).parent.parent / "backend"
 sys.path.insert(0, str(backend_dir))
 
@@ -18,80 +18,80 @@ from sqlalchemy import text
 
 
 async def create_sample_data():
-    """创建示例数据"""
+    """Create sample data"""
     from app.database import AsyncSessionLocal
     
     async with AsyncSessionLocal() as session:
         try:
-            # 检查是否已有数据
+            # Check if data already exists
             result = await session.execute(text("SELECT COUNT(*) FROM knowledge_points"))
             count = result.scalar()
             
             if count > 0:
-                print("✅ 数据库已有数据，跳过初始化")
+                print("✅ Database already has data, skipping initialization")
                 return
             
-            # 创建知识点
+            # Create knowledge points
             knowledge_points = [
                 KnowledgePoint(
                     name="Array",
-                    description="基础数组操作",
+                    description="Basic array operations",
                     difficulty="easy",
                     category="basics",
                     order_index=1
                 ),
                 KnowledgePoint(
                     name="String",
-                    description="字符串处理",
+                    description="String processing",
                     difficulty="easy",
                     category="basics",
                     order_index=2
                 ),
                 KnowledgePoint(
                     name="Hash Table",
-                    description="哈希表的应用",
+                    description="Hash table applications",
                     difficulty="easy",
                     category="data_structure",
                     order_index=3
                 ),
                 KnowledgePoint(
                     name="Two Pointers",
-                    description="双指针技巧",
+                    description="Two pointer technique",
                     difficulty="medium",
                     category="technique",
                     order_index=4
                 ),
                 KnowledgePoint(
                     name="Linked List",
-                    description="链表操作和技巧",
+                    description="Linked list operations and techniques",
                     difficulty="medium",
                     category="data_structure",
                     order_index=5
                 ),
                 KnowledgePoint(
                     name="Binary Search",
-                    description="二分查找及其变体",
+                    description="Binary search and its variants",
                     difficulty="medium",
                     category="algorithm",
                     order_index=6
                 ),
                 KnowledgePoint(
                     name="Binary Tree",
-                    description="二叉树遍历和操作",
+                    description="Binary tree traversal and operations",
                     difficulty="medium",
                     category="data_structure",
                     order_index=7
                 ),
                 KnowledgePoint(
                     name="Dynamic Programming",
-                    description="动态规划基础",
+                    description="Dynamic programming basics",
                     difficulty="hard",
                     category="algorithm",
                     order_index=8
                 ),
                 KnowledgePoint(
                     name="Graph",
-                    description="图的遍历和算法",
+                    description="Graph traversal and algorithms",
                     difficulty="hard",
                     category="algorithm",
                     order_index=9
@@ -100,34 +100,34 @@ async def create_sample_data():
             
             session.add_all(knowledge_points)
             await session.commit()
-            print("✅ 创建了 9 个知识点")
+            print("✅ Created 9 knowledge points")
             
-            print("✅ 知识点创建成功，运行 init_sample_questions.py 添加题目")
+            print("✅ Knowledge points created successfully, run init_sample_questions.py to add questions")
             
         except Exception as e:
-            print(f"❌ 错误: {e}")
+            print(f"❌ Error: {e}")
             await session.rollback()
             raise
 
 
 async def main():
-    """主函数"""
-    print("🚀 初始化数据库...")
+    """Main function"""
+    print("🚀 Initializing database...")
     
     try:
-        # 创建表
-        print("📊 创建表结构...")
+        # Create tables
+        print("📊 Creating table structure...")
         await init_db()
-        print("✅ 表创建成功")
+        print("✅ Tables created successfully")
         
-        # 创建示例数据
-        print("📝 创建示例数据...")
+        # Create sample data
+        print("📝 Creating sample data...")
         await create_sample_data()
         
-        print("✅ 数据库初始化完成！")
+        print("✅ Database initialization completed!")
         
     except Exception as e:
-        print(f"❌ 初始化失败: {e}")
+        print(f"❌ Initialization failed: {e}")
         sys.exit(1)
 
 

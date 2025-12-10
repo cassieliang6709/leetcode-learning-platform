@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Fix starter_code to support stdin input for test cases
-修复 starter_code，使其支持从 stdin 读取测试输入，并使用正确的方法名
+Update starter_code to read test input from stdin and use correct method names
 """
 import os
 import sys
@@ -19,12 +19,12 @@ DB_CONFIG = {
     "port": os.getenv("DB_PORT", "5432")
 }
 
-# LeetCode 官方方法名映射
+# LeetCode official method name mapping
 OFFICIAL_METHOD_NAMES = {
     1: "twoSum",
     2: "addTwoNumbers",
     3: "lengthOfLongestSubstring",
-    5: "longestPalindrome",  # 注意：是 longestPalindrome 不是 longestPalindromicSubstring
+    5: "longestPalindrome",  # Note: it's longestPalindrome, not longestPalindromicSubstring
     11: "maxArea",
     15: "threeSum",
     17: "letterCombinations",
@@ -120,7 +120,7 @@ OFFICIAL_METHOD_NAMES = {
 
 
 def extract_method_name(code: str) -> str:
-    """从代码中提取方法名"""
+    """Extract method name from code"""
     match = re.search(r'def\s+(\w+)\s*\(', code)
     if match:
         return match.group(1)
@@ -128,8 +128,8 @@ def extract_method_name(code: str) -> str:
 
 
 def extract_method_signature(code: str) -> str:
-    """提取完整的方法签名（包括参数和返回类型）"""
-    # 匹配 def method_name(...) -> return_type:
+    """Extract complete method signature (including parameters and return type)"""
+    # Match def method_name(...) -> return_type:
     match = re.search(r'def\s+\w+\s*\([^)]*\)(?:\s*->\s*[^:]+)?:', code)
     if match:
         return match.group(0).rstrip(':')
@@ -138,36 +138,36 @@ def extract_method_signature(code: str) -> str:
 
 def create_stdin_test_framework(method_name: str, method_signature: str, test_cases: list) -> str:
     """
-    创建支持 stdin 的测试框架
-    根据测试用例自动推断输入解析方式
+    Create test framework that supports stdin input
+    Automatically infer input parsing method based on test cases
     """
     
-    # 从方法签名中提取参数
-    # 例如: def twoSum(self, nums: List[int], target: int) -> List[int]:
+    # Extract parameters from method signature
+    # Example: def twoSum(self, nums: List[int], target: int) -> List[int]:
     params_match = re.search(r'\(([^)]+)\)', method_signature)
     if not params_match:
         params = []
     else:
         params_str = params_match.group(1)
-        # 移除 self 和类型注解，只保留参数名
+        # Remove self and type annotations, keep only parameter names
         params = []
         for param in params_str.split(','):
             param = param.strip()
             if param and param != 'self':
-                # 提取参数名（去掉类型注解）
+                # Extract parameter name (remove type annotation)
                 param_name = param.split(':')[0].strip()
                 params.append(param_name)
     
-    # 分析测试用例来推断输入格式
+    # Analyze test cases to infer input format
     has_multiple_inputs = False
     if test_cases and len(test_cases) > 0:
         first_input = test_cases[0].get('input', '')
-        # 如果输入包含换行符，说明有多个参数
+        # If input contains newlines, it means there are multiple parameters
         has_multiple_inputs = '\n' in first_input
     
-    # 生成测试代码
+    # Generate test code
     if has_multiple_inputs:
-        # 多参数情况
+        # Multiple parameters case
         test_code = f"""
 # Test framework - DO NOT MODIFY
 if __name__ == "__main__":
@@ -204,7 +204,7 @@ if __name__ == "__main__":
         sys.exit(1)
 """
     else:
-        # 单参数情况
+        # Single parameter case
         test_code = f"""
 # Test framework - DO NOT MODIFY
 if __name__ == "__main__":
@@ -242,41 +242,41 @@ if __name__ == "__main__":
 
 def create_fixed_starter_code(original_code: str, correct_method_name: str, test_cases: list) -> str:
     """
-    创建修复后的 starter code
-    1. 提取 Solution 类定义（去掉旧的测试代码）
-    2. 修正方法名
-    3. 添加新的 stdin 测试框架
+    Create fixed starter code
+    1. Extract Solution class definition (remove old test code)
+    2. Fix method name
+    3. Add new stdin test framework
     """
     
-    # 添加必要的 imports
+    # Add necessary imports
     imports = "from typing import List, Dict, Optional, Set, Tuple, Any\nimport sys\nimport json\n\n"
     
-    # 提取当前方法名和签名
+    # Extract current method name and signature
     current_method = extract_method_name(original_code)
     method_signature = extract_method_signature(original_code)
     
     if not method_signature:
-        # 如果无法提取签名，使用基本模板
+        # If signature cannot be extracted, use basic template
         solution_class = f"""class Solution:
     def {correct_method_name}(self):
         # Write your solution here
         pass
 """
     else:
-        # 替换方法名但保留签名
+        # Replace method name but keep signature
         if current_method and current_method != correct_method_name:
             method_signature = method_signature.replace(f'def {current_method}', f'def {correct_method_name}')
         
-        # 提取方法体（如果存在）
-        # 找到方法定义的结束位置
+        # Extract method body (if exists)
+        # Find the end position of method definition
         method_def_match = re.search(r'def\s+\w+\s*\([^)]*\)(?:\s*->\s*[^:]+)?:\s*\n', original_code)
         if method_def_match:
             after_def = original_code[method_def_match.end():]
-            # 提取方法体（直到遇到 class 结束或 if __name__）
+            # Extract method body (until class ends or if __name__)
             method_body_lines = []
             for line in after_def.split('\n'):
                 if line and not line.startswith('    '):
-                    # 不再是方法的一部分
+                    # No longer part of the method
                     break
                 if 'if __name__' in line:
                     break
@@ -293,7 +293,7 @@ def create_fixed_starter_code(original_code: str, correct_method_name: str, test
 {method_body}
 """
     
-    # 生成测试框架
+    # Generate test framework
     test_framework = create_stdin_test_framework(correct_method_name, method_signature or f'def {correct_method_name}(self)', test_cases)
     
     return imports + solution_class + test_framework
@@ -304,7 +304,7 @@ def main():
     cursor = conn.cursor(cursor_factory=RealDictCursor)
     
     try:
-        # 获取所有有 starter_code 的题目
+        # Get all questions with starter_code
         cursor.execute("""
             SELECT id, leetcode_id, title, starter_code, test_cases 
             FROM quiz_questions 
@@ -327,7 +327,7 @@ def main():
             
             print(f"\n📝 #{leetcode_id} - {title}")
             
-            # 只处理 Python 代码
+            # Only process Python code
             if 'python' not in starter_code:
                 print("   ⚠️  No Python starter code, skipping...")
                 skipped_count += 1
@@ -335,16 +335,16 @@ def main():
             
             python_code = starter_code['python']
             
-            # 检查是否已经有正确的测试框架
+            # Check if already has correct test framework
             if '# Test framework - DO NOT MODIFY' in python_code:
                 print("   ✓ Already has correct test framework")
                 skipped_count += 1
                 continue
             
-            # 获取正确的方法名
+            # Get correct method name
             correct_method_name = OFFICIAL_METHOD_NAMES.get(leetcode_id)
             if not correct_method_name:
-                # 尝试从现有代码中提取
+                # Try to extract from existing code
                 correct_method_name = extract_method_name(python_code)
                 if not correct_method_name:
                     print("   ✗ Could not determine method name, skipping...")
@@ -355,7 +355,7 @@ def main():
             print(f"   Current method: {current_method}")
             print(f"   Correct method: {correct_method_name}")
             
-            # 创建修复后的代码
+            # Create fixed code
             try:
                 fixed_python_code = create_fixed_starter_code(
                     python_code, 
@@ -363,7 +363,7 @@ def main():
                     test_cases
                 )
                 
-                # 更新数据库
+                # Update database
                 new_starter_code = starter_code.copy()
                 new_starter_code['python'] = fixed_python_code
                 
