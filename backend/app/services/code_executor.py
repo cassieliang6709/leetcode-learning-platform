@@ -1,22 +1,40 @@
 """
-Code Execution Service using Piston API
-Safely executes user code in isolated sandboxes
+Code Execution Service using Piston API.
+
+This module provides safe code execution in isolated sandboxes using
+the Piston API. It supports multiple programming languages and includes
+test case execution capabilities.
+
+The service handles code preprocessing, execution, and result parsing
+with comprehensive error handling and timeout management.
+
+Author: Yue Liang
 """
-import httpx
+
 from typing import Dict, List, Any, Optional
-import asyncio
+import httpx
 
 
 class PistonExecutor:
     """
-    Piston API client for executing code in multiple languages
+    Piston API client for executing code in multiple languages.
+
+    Provides safe code execution in isolated sandboxes with support
+    for multiple programming languages. Handles code preprocessing,
+    execution, and result parsing.
+
     Official API: https://github.com/engineer-man/piston
+
+    Attributes:
+        BASE_URL: Base URL for Piston API.
+        LANGUAGE_MAP: Mapping of language names to runtime identifiers.
+        client: HTTP client for API requests.
     """
     
-    BASE_URL = "https://emkc.org/api/v2/piston"
+    BASE_URL: str = "https://emkc.org/api/v2/piston"
     
     # Language runtime mappings
-    LANGUAGE_MAP = {
+    LANGUAGE_MAP: Dict[str, str] = {
         "python": "python",
         "javascript": "javascript",
         "java": "java",
@@ -31,7 +49,13 @@ class PistonExecutor:
         "kotlin": "kotlin",
     }
     
-    def __init__(self):
+    def __init__(self) -> None:
+        """
+        Initialize PistonExecutor with HTTP client.
+
+        Creates an async HTTP client with 30-second timeout for
+        API requests.
+        """
         self.client = httpx.AsyncClient(timeout=30.0)
     
     async def execute_code(
@@ -39,20 +63,34 @@ class PistonExecutor:
         code: str,
         language: str,
         stdin: str = "",
-        args: List[str] = None
+        args: Optional[List[str]] = None
     ) -> Dict[str, Any]:
         """
-        Execute code using Piston API
-        
+        Execute code using Piston API.
+
         Args:
-            code: Source code to execute
-            language: Programming language
-            stdin: Standard input for the program
-            args: Command line arguments
-            
+            code: Source code to execute.
+            language: Programming language (e.g., "python", "javascript").
+            stdin: Standard input for the program. Defaults to empty string.
+            args: Command line arguments. Defaults to None.
+
         Returns:
-            Execution result with output, errors, and stats
+            Dictionary containing:
+                - success: Boolean indicating execution success
+                - error: Error message if execution failed
+                - output: Program output
+                - compile_output: Compilation output (if applicable)
+                - run_time: Execution time in milliseconds
+                - memory: Memory usage (not provided by Piston)
+
+        Raises:
+            ValueError: If code or language is empty or invalid.
         """
+        if not code or not isinstance(code, str):
+            raise ValueError("code must be a non-empty string")
+        if not language or not isinstance(language, str):
+            raise ValueError("language must be a non-empty string")
+
         runtime = self.LANGUAGE_MAP.get(language.lower())
         if not runtime:
             return {
@@ -129,17 +167,40 @@ class PistonExecutor:
         test_cases: List[Dict[str, Any]]
     ) -> List[Dict[str, Any]]:
         """
-        Run multiple test cases against the code
-        
+        Run multiple test cases against the code.
+
+        Executes code with each test case and compares output
+        with expected results.
+
         Args:
-            code: Source code to test
-            language: Programming language
-            test_cases: List of test cases with input and expected output
-            
+            code: Source code to test.
+            language: Programming language.
+            test_cases: List of test case dictionaries with keys:
+                - input: Test input data
+                - expected: Expected output
+
         Returns:
-            List of test results
+            List of test result dictionaries containing:
+                - test_case_id: Test case number
+                - input: Test input
+                - expected: Expected output
+                - actual: Actual output
+                - passed: Boolean indicating if test passed
+                - error: Error message if execution failed
+                - run_time: Execution time
+                - memory: Memory usage
+
+        Raises:
+            ValueError: If code, language, or test_cases is invalid.
         """
-        results = []
+        if not code or not isinstance(code, str):
+            raise ValueError("code must be a non-empty string")
+        if not language or not isinstance(language, str):
+            raise ValueError("language must be a non-empty string")
+        if not isinstance(test_cases, list):
+            raise ValueError("test_cases must be a list")
+
+        results: List[Dict[str, Any]] = []
         
         for i, test_case in enumerate(test_cases):
             input_data = test_case.get("input", "")
@@ -172,9 +233,21 @@ class PistonExecutor:
     
     def _preprocess_code(self, code: str, language: str) -> str:
         """
-        Preprocess code to add necessary imports and setup
-        Especially important for LeetCode-style Python code with type hints
+        Preprocess code to add necessary imports and setup.
+
+        Especially important for LeetCode-style Python code with type hints.
+        Adds common typing imports if not already present.
+
+        Args:
+            code: Source code to preprocess.
+            language: Programming language.
+
+        Returns:
+            Preprocessed code with necessary imports added.
         """
+        if not code or not isinstance(code, str):
+            return code
+
         language = language.lower()
         
         if language == "python":
@@ -188,8 +261,27 @@ class PistonExecutor:
         
         return code
     
-    def _parse_result(self, result: Dict) -> Dict[str, Any]:
-        """Parse Piston API response"""
+    def _parse_result(self, result: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Parse Piston API response into standardized format.
+
+        Args:
+            result: Raw response from Piston API.
+
+        Returns:
+            Standardized result dictionary with success status,
+            output, errors, and execution metadata.
+        """
+        if not isinstance(result, dict):
+            return {
+                "success": False,
+                "error": "Invalid API response format",
+                "output": "",
+                "compile_output": "",
+                "run_time": 0,
+                "memory": 0
+            }
+
         run_result = result.get("run", {})
         compile_result = result.get("compile", {})
         
@@ -229,8 +321,19 @@ class PistonExecutor:
         }
     
     def _get_filename(self, language: str) -> str:
-        """Get appropriate filename for the language"""
-        extensions = {
+        """
+        Get appropriate filename for the language.
+
+        Args:
+            language: Programming language name.
+
+        Returns:
+            Filename with appropriate extension for the language.
+        """
+        if not language or not isinstance(language, str):
+            return "main.txt"
+
+        extensions: Dict[str, str] = {
             "python": "main.py",
             "javascript": "main.js",
             "typescript": "main.ts",
@@ -246,8 +349,19 @@ class PistonExecutor:
         }
         return extensions.get(language.lower(), "main.txt")
     
-    async def get_supported_languages(self) -> List[Dict[str, str]]:
-        """Get list of supported languages from Piston"""
+    async def get_supported_languages(self) -> List[Dict[str, Any]]:
+        """
+        Get list of supported languages from Piston API.
+
+        Returns:
+            List of language dictionaries containing:
+                - language: Language name
+                - version: Runtime version
+                - aliases: List of language aliases
+
+        Note:
+            Returns empty list if API request fails.
+        """
         try:
             response = await self.client.get(f"{self.BASE_URL}/runtimes")
             response.raise_for_status()
@@ -269,8 +383,13 @@ class PistonExecutor:
             print(f"Error fetching runtimes: {e}")
             return []
     
-    async def close(self):
-        """Close the HTTP client"""
+    async def close(self) -> None:
+        """
+        Close the HTTP client.
+
+        Should be called when the executor is no longer needed
+        to properly clean up resources.
+        """
         await self.client.aclose()
 
 
@@ -279,7 +398,15 @@ _executor = None
 
 
 def get_executor() -> PistonExecutor:
-    """Get or create the global executor instance"""
+    """
+    Get or create the global executor instance.
+
+    Uses singleton pattern to ensure only one executor instance
+    is created and reused across the application.
+
+    Returns:
+        Global PistonExecutor instance.
+    """
     global _executor
     if _executor is None:
         _executor = PistonExecutor()
@@ -289,19 +416,34 @@ def get_executor() -> PistonExecutor:
 async def execute_user_code(
     code: str,
     language: str,
-    test_cases: List[Dict[str, Any]] = None
+    test_cases: Optional[List[Dict[str, Any]]] = None
 ) -> Dict[str, Any]:
     """
-    High-level function to execute user code with optional test cases
-    
+    High-level function to execute user code with optional test cases.
+
+    Provides a convenient interface for code execution that handles
+    both simple execution and test case validation.
+
     Args:
-        code: Source code
-        language: Programming language
-        test_cases: Optional list of test cases
-        
+        code: Source code to execute.
+        language: Programming language.
+        test_cases: Optional list of test cases. If provided, runs
+            in test mode. If None, runs in simple execution mode.
+
     Returns:
-        Execution results
+        Dictionary containing execution results:
+            - mode: "test" or "run"
+            - test_results: List of test results (if test mode)
+            - summary: Test summary with pass/fail counts (if test mode)
+            - result: Execution result (if run mode)
+
+    Raises:
+        ValueError: If code or language is invalid.
     """
+    if not code or not isinstance(code, str):
+        raise ValueError("code must be a non-empty string")
+    if not language or not isinstance(language, str):
+        raise ValueError("language must be a non-empty string")
     executor = get_executor()
     
     if test_cases:

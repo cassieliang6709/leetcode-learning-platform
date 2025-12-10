@@ -1,211 +1,427 @@
-from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, func, and_, or_
-from typing import List
-from datetime import datetime, timedelta
+"""
+Quiz routes for daily challenges and quiz question management.
+
+This module provides API endpoints for:
+- Daily knowledge challenge questions
+- Quiz question retrieval and submission
+- Progress tracking
+- Quiz attempts recording
+
+Author: Yue Liang
+"""
+
+from datetime import datetime
+from typing import List, Dict, Any
 import random
+from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select, and_
 
 from app.database import get_db
-from app.models import QuizQuestion, QuizAttempt, KnowledgePoint, DailyKnowledgeQuestion, DailyKnowledgeAttempt
-from app.schemas import QuizQuestionResponse, DailyQuizQuestion, QuizAnswerSubmit, DailyProgressResponse
+from app.models import (
+    QuizQuestion, QuizAttempt, KnowledgePoint,
+    DailyKnowledgeQuestion, DailyKnowledgeAttempt
+)
+from app.schemas import (
+    QuizQuestionResponse, DailyQuizQuestion,
+    QuizAnswerSubmit, DailyProgressResponse
+)
 from app.services.ai_service import generate_quiz_questions
 
 router = APIRouter()
 
-# ------> home page
-"""Get daily knowledge challenge questions (3 random questions excluding already answered today)"""
 @router.get("/daily/{user_id}", response_model=DailyProgressResponse)
-async def get_daily_quiz(user_id: int, db: AsyncSession = Depends(get_db)):
-    # Get today's start time
-    today_start = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
-    
-    # Get questions answered today by this user (from daily_knowledge_attempts)
-    answered_today_query = select(DailyKnowledgeAttempt.question_id).where(
-        and_(
-            DailyKnowledgeAttempt.user_id == user_id,
-            DailyKnowledgeAttempt.completed_at >= today_start
-        )
-    )
-    answered_today_result = await db.execute(answered_today_query)
-    answered_today_ids = [row[0] for row in answered_today_result.fetchall()]
-    
-    # Get all questions excluding ones answered today (from daily_knowledge_questions)
-    if answered_today_ids:
-        questions_query = select(DailyKnowledgeQuestion).where(
-            DailyKnowledgeQuestion.id.not_in(answered_today_ids)
-        )
-    else:
-        questions_query = select(DailyKnowledgeQuestion)
-    
-    questions_result = await db.execute(questions_query)
-    # return a list that includes objects of DailyKnowledgeQuestion according to query_set
-    all_questions = list(questions_result.scalars().all())
-    
-    # If we have less than 3 questions total, return what we have
-    # Otherwise, randomly select 3 questions
-    num_questions = min(3, len(all_questions))
-    if len(all_questions) > 3:
-        selected_questions = random.sample(all_questions, 3)
-    else:
-        selected_questions = all_questions
-    
-    # Get answered questions for today to build progress
-    answered_query = select(DailyKnowledgeAttempt).where(
-        and_(
-            DailyKnowledgeAttempt.user_id == user_id,
-            DailyKnowledgeAttempt.completed_at >= today_start
-        )
-    )
-    answered_result = await db.execute(answered_query)
-    answered_attempts = list(answered_result.scalars().all())
-    
-    # Prepare response
-    daily_questions = []
-    for q in selected_questions:
-        # Get knowledge point name
-        kp_name = None
-        if q.knowledge_point_id:
-            kp_result = await db.execute(
-                select(KnowledgePoint.name).where(KnowledgePoint.id == q.knowledge_point_id)
-            )
-            kp_name = kp_result.scalar_one_or_none()
-        
-        # For frontend compatibility: use question as both title and description
-        # create objects of daily_quiz_question used on frontend
-        daily_questions.append(DailyQuizQuestion(
-            id=q.id,
-            title=q.question,  # Use question text as title
-            description=q.explanation or "",  # Use explanation as description (empty if None)
-            difficulty=q.difficulty or "medium",
-            options=q.options,
-            knowledge_point_name=kp_name,
-            is_answered=False
-        ))
-    
-    correct_count = sum(1 for attempt in answered_attempts if attempt.is_correct)
-    
-    return DailyProgressResponse(
-        total_questions=3,
-        answered_count=len(answered_today_ids),
-        correct_count=correct_count,
-        questions=daily_questions
-    )
+async def get_daily_quiz(
+    user_id: int,
+    db: AsyncSession = Depends(get_db)
+) -> DailyProgressResponse:
+    """
+    Get daily knowledge challenge questions.
 
-# ------> Homepage
-"""Submit answer for a daily knowledge question"""
+    Returns 3 random questions excluding ones already answered today.
+    Includes progress information for the current day.
+
+    Args:
+        user_id: ID of the user requesting daily quiz.
+        db: Database session dependency.
+
+    Returns:
+        DailyProgressResponse containing:
+            - total_questions: Total questions for the day (3)
+            - answered_count: Number of questions answered today
+            - correct_count: Number of correct answers today
+            - questions: List of daily quiz questions
+
+    Raises:
+        HTTPException: If user_id is invalid or database error occurs.
+    """
+    if not isinstance(user_id, int) or user_id <= 0:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid user_id"
+        )
+    try:
+        # Get today's start time
+        today_start = datetime.now().replace(
+            hour=0, minute=0, second=0, microsecond=0
+        )
+        
+        # Get questions answered today by this user
+        answered_today_query = select(DailyKnowledgeAttempt.question_id).where(
+            and_(
+                DailyKnowledgeAttempt.user_id == user_id,
+                DailyKnowledgeAttempt.completed_at >= today_start
+            )
+        )
+        answered_today_result = await db.execute(answered_today_query)
+        answered_today_ids = [
+            row[0] for row in answered_today_result.fetchall()
+        ]
+        
+        # Get all questions excluding ones answered today
+        if answered_today_ids:
+            questions_query = select(DailyKnowledgeQuestion).where(
+                DailyKnowledgeQuestion.id.not_in(answered_today_ids)
+            )
+        else:
+            questions_query = select(DailyKnowledgeQuestion)
+        
+        questions_result = await db.execute(questions_query)
+        all_questions = list(questions_result.scalars().all())
+        
+        # Randomly select 3 questions (or all if less than 3 available)
+        if len(all_questions) > 3:
+            selected_questions = random.sample(all_questions, 3)
+        else:
+            selected_questions = all_questions
+        
+        # Get answered questions for today to build progress
+        answered_query = select(DailyKnowledgeAttempt).where(
+            and_(
+                DailyKnowledgeAttempt.user_id == user_id,
+                DailyKnowledgeAttempt.completed_at >= today_start
+            )
+        )
+        answered_result = await db.execute(answered_query)
+        answered_attempts = list(answered_result.scalars().all())
+        
+        # Prepare response
+        daily_questions: List[DailyQuizQuestion] = []
+        for q in selected_questions:
+            # Get knowledge point name
+            kp_name = None
+            if q.knowledge_point_id:
+                kp_result = await db.execute(
+                    select(KnowledgePoint.name).where(
+                        KnowledgePoint.id == q.knowledge_point_id
+                    )
+                )
+                kp_name = kp_result.scalar_one_or_none()
+            
+            daily_questions.append(DailyQuizQuestion(
+                id=q.id,
+                title=q.question,
+                description=q.explanation or "",
+                difficulty=q.difficulty or "medium",
+                options=q.options,
+                knowledge_point_name=kp_name,
+                is_answered=False
+            ))
+        
+        correct_count = sum(
+            1 for attempt in answered_attempts if attempt.is_correct
+        )
+        
+        return DailyProgressResponse(
+            total_questions=3,
+            answered_count=len(answered_today_ids),
+            correct_count=correct_count,
+            questions=daily_questions
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to get daily quiz: {str(e)}"
+        ) from e
+
 @router.post("/answer/{user_id}")
 async def submit_answer(
     user_id: int,
     answer: QuizAnswerSubmit,
     db: AsyncSession = Depends(get_db)
-):
-    
-    # Get the question from daily_knowledge_questions
-    question_result = await db.execute(
-        select(DailyKnowledgeQuestion).where(DailyKnowledgeQuestion.id == answer.question_id)
-    )
-    question = question_result.scalar_one_or_none()
-    if not question:
-        raise HTTPException(status_code=404, detail="Question not found")
-    
-    # Check if answer is correct
-    is_correct = answer.selected_option == question.correct_answer
-    
-    # Save attempt to daily_knowledge_attempts
-    attempt = DailyKnowledgeAttempt(
-        user_id=user_id,
-        question_id=answer.question_id,
-        is_correct=is_correct
-    )
-    db.add(attempt)
-    await db.commit()
-    
-    return {
-        "is_correct": is_correct,
-        "message": "Great job! 🎉" if is_correct else "Not quite right. Try again tomorrow!",
-        "explanation": question.explanation if not is_correct else None
-    }
+) -> Dict[str, Any]:
+    """
+    Submit answer for a daily knowledge question.
+
+    Validates the answer and records the attempt in the database.
+
+    Args:
+        user_id: ID of the user submitting the answer.
+        answer: QuizAnswerSubmit containing question_id and selected_option.
+        db: Database session dependency.
+
+    Returns:
+        Dictionary containing:
+            - is_correct: Boolean indicating if answer is correct
+            - message: Feedback message
+            - explanation: Explanation text (if incorrect)
+
+    Raises:
+        HTTPException: If question not found (404) or invalid input (400).
+    """
+    if not isinstance(user_id, int) or user_id <= 0:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid user_id"
+        )
+
+    try:
+        # Get the question from daily_knowledge_questions
+        question_result = await db.execute(
+            select(DailyKnowledgeQuestion).where(
+                DailyKnowledgeQuestion.id == answer.question_id
+            )
+        )
+        question = question_result.scalar_one_or_none()
+        
+        if not question:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Question not found"
+            )
+        
+        # Validate selected option
+        if not 0 <= answer.selected_option < len(question.options):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid option index"
+            )
+        
+        # Check if answer is correct
+        is_correct = answer.selected_option == question.correct_answer
+        
+        # Save attempt to daily_knowledge_attempts
+        attempt = DailyKnowledgeAttempt(
+            user_id=user_id,
+            question_id=answer.question_id,
+            is_correct=is_correct
+        )
+        db.add(attempt)
+        await db.commit()
+        
+        return {
+            "is_correct": is_correct,
+            "message": (
+                "Great job! 🎉" if is_correct
+                else "Not quite right. Try again tomorrow!"
+            ),
+            "explanation": question.explanation if not is_correct else None
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        await db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to submit answer: {str(e)}"
+        ) from e
 
 
 @router.get("/progress/{user_id}")
-async def get_daily_progress(user_id: int, db: AsyncSession = Depends(get_db)):
-    """Get today's daily knowledge challenge progress"""
-    today_start = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
-    
-    # Get attempts today from daily_knowledge_attempts
-    attempts_query = select(DailyKnowledgeAttempt).where(
-        and_(
-            DailyKnowledgeAttempt.user_id == user_id,
-            DailyKnowledgeAttempt.completed_at >= today_start
+async def get_daily_progress(
+    user_id: int,
+    db: AsyncSession = Depends(get_db)
+) -> Dict[str, Any]:
+    """
+    Get today's daily knowledge challenge progress.
+
+    Returns statistics about the user's progress for the current day.
+
+    Args:
+        user_id: ID of the user.
+        db: Database session dependency.
+
+    Returns:
+        Dictionary containing:
+            - answered_count: Number of questions answered today
+            - correct_count: Number of correct answers
+            - total_questions: Total questions per day (3)
+            - percentage: Completion percentage
+
+    Raises:
+        HTTPException: If user_id is invalid or database error occurs.
+    """
+    if not isinstance(user_id, int) or user_id <= 0:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid user_id"
         )
-    )
-    attempts_result = await db.execute(attempts_query)
-    attempts = list(attempts_result.scalars().all())
-    
-    correct_count = sum(1 for attempt in attempts if attempt.is_correct)
-    
-    return {
-        "answered_count": len(attempts),
-        "correct_count": correct_count,
-        "total_questions": 3,
-        "percentage": (len(attempts) / 3) * 100 if len(attempts) > 0 else 0
-    }
+
+    try:
+        today_start = datetime.now().replace(
+            hour=0, minute=0, second=0, microsecond=0
+        )
+        
+        # Get attempts today from daily_knowledge_attempts
+        attempts_query = select(DailyKnowledgeAttempt).where(
+            and_(
+                DailyKnowledgeAttempt.user_id == user_id,
+                DailyKnowledgeAttempt.completed_at >= today_start
+            )
+        )
+        attempts_result = await db.execute(attempts_query)
+        attempts = list(attempts_result.scalars().all())
+        
+        correct_count = sum(1 for attempt in attempts if attempt.is_correct)
+        
+        return {
+            "answered_count": len(attempts),
+            "correct_count": correct_count,
+            "total_questions": 3,
+            "percentage": (len(attempts) / 3) * 100 if len(attempts) > 0 else 0
+        }
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to get progress: {str(e)}"
+        ) from e
 
 
-@router.get("/by-knowledge/{knowledge_point_id}", response_model=List[QuizQuestionResponse])
+@router.get(
+    "/by-knowledge/{knowledge_point_id}",
+    response_model=List[QuizQuestionResponse]
+)
 async def get_quizzes_by_knowledge(
     knowledge_point_id: int,
     db: AsyncSession = Depends(get_db)
-):
-    """Get quiz questions for a specific knowledge point"""
-    # Check if knowledge point exists
-    kp_result = await db.execute(
-        select(KnowledgePoint).where(KnowledgePoint.id == knowledge_point_id)
-    )
-    knowledge_point = kp_result.scalar_one_or_none()
-    if not knowledge_point:
-        raise HTTPException(status_code=404, detail="Knowledge point not found")
+) -> List[QuizQuestionResponse]:
+    """
+    Get quiz questions for a specific knowledge point.
 
-    # Get existing questions
-    result = await db.execute(
-        select(QuizQuestion).where(QuizQuestion.knowledge_point_id == knowledge_point_id)
-    )
-    questions = result.scalars().all()
+    If no questions exist, generates new questions using AI service.
 
-    # If no questions exist, generate some using AI
-    if not questions:
-        generated = await generate_quiz_questions(knowledge_point.name, knowledge_point.category)
-        for q_data in generated:
-            question = QuizQuestion(
-                knowledge_point_id=knowledge_point_id,
-                leetcode_id=q_data.get("leetcode_id"),
-                title=q_data.get("title"),
-                description=q_data.get("description"),
-                difficulty=q_data.get("difficulty"),
-                solution=q_data.get("solution"),
-                hints=q_data.get("hints"),
-                video_link=q_data.get("video_link")
+    Args:
+        knowledge_point_id: ID of the knowledge point.
+        db: Database session dependency.
+
+    Returns:
+        List of QuizQuestionResponse objects.
+
+    Raises:
+        HTTPException: If knowledge point not found (404) or
+            generation fails (500).
+    """
+    if not isinstance(knowledge_point_id, int) or knowledge_point_id <= 0:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid knowledge_point_id"
+        )
+
+    try:
+        # Check if knowledge point exists
+        kp_result = await db.execute(
+            select(KnowledgePoint).where(
+                KnowledgePoint.id == knowledge_point_id
             )
-            db.add(question)
-        await db.commit()
+        )
+        knowledge_point = kp_result.scalar_one_or_none()
+        
+        if not knowledge_point:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Knowledge point not found"
+            )
 
-        # Re-fetch questions
+        # Get existing questions
         result = await db.execute(
-            select(QuizQuestion).where(QuizQuestion.knowledge_point_id == knowledge_point_id)
+            select(QuizQuestion).where(
+                QuizQuestion.knowledge_point_id == knowledge_point_id
+            )
         )
         questions = result.scalars().all()
 
-    return questions
+        # If no questions exist, generate some using AI
+        if not questions:
+            generated = await generate_quiz_questions(
+                knowledge_point.name or "",
+                knowledge_point.category or ""
+            )
+            for q_data in generated:
+                question = QuizQuestion(
+                    knowledge_point_id=knowledge_point_id,
+                    leetcode_id=q_data.get("leetcode_id"),
+                    title=q_data.get("title", ""),
+                    description=q_data.get("description", ""),
+                    difficulty=q_data.get("difficulty"),
+                    solution=q_data.get("solution"),
+                    hints=q_data.get("hints"),
+                    video_link=q_data.get("video_link")
+                )
+                db.add(question)
+            await db.commit()
+
+            # Re-fetch questions
+            result = await db.execute(
+                select(QuizQuestion).where(
+                    QuizQuestion.knowledge_point_id == knowledge_point_id
+                )
+            )
+            questions = result.scalars().all()
+
+        return list(questions)
+    except HTTPException:
+        raise
+    except Exception as e:
+        await db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to get quizzes: {str(e)}"
+        ) from e
 
 
 @router.get("/{question_id}", response_model=QuizQuestionResponse)
-async def get_quiz_detail(question_id: int, db: AsyncSession = Depends(get_db)):
-    """Get detailed quiz question"""
-    result = await db.execute(select(QuizQuestion).where(QuizQuestion.id == question_id))
-    question = result.scalar_one_or_none()
-    if not question:
-        raise HTTPException(status_code=404, detail="Question not found")
-    return question
+async def get_quiz_detail(
+    question_id: int,
+    db: AsyncSession = Depends(get_db)
+) -> QuizQuestionResponse:
+    """
+    Get detailed quiz question information.
+
+    Args:
+        question_id: ID of the quiz question.
+        db: Database session dependency.
+
+    Returns:
+        QuizQuestionResponse with question details.
+
+    Raises:
+        HTTPException: If question not found (404).
+    """
+    if not isinstance(question_id, int) or question_id <= 0:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid question_id"
+        )
+
+    try:
+        result = await db.execute(
+            select(QuizQuestion).where(QuizQuestion.id == question_id)
+        )
+        question = result.scalar_one_or_none()
+        
+        if not question:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Question not found"
+            )
+        return question
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to get quiz detail: {str(e)}"
+        ) from e
 
 
 @router.post("/{question_id}/attempt/{user_id}")
@@ -215,20 +431,60 @@ async def submit_quiz_attempt(
     is_correct: bool,
     hints_used: int = 0,
     db: AsyncSession = Depends(get_db)
-):
-    """Submit quiz attempt"""
-    attempt = QuizAttempt(
-        user_id=user_id,
-        question_id=question_id,
-        is_correct=is_correct,
-        hints_used=hints_used
-    )
-    db.add(attempt)
-    await db.commit()
+) -> Dict[str, Any]:
+    """
+    Submit quiz attempt record.
 
-    return {
-        "message": "Attempt recorded successfully",
-        "is_correct": is_correct
-    }
+    Records a user's attempt at answering a quiz question.
+
+    Args:
+        question_id: ID of the quiz question.
+        user_id: ID of the user.
+        is_correct: Whether the answer was correct.
+        hints_used: Number of hints used (default: 0).
+        db: Database session dependency.
+
+    Returns:
+        Dictionary with success message and correctness status.
+
+    Raises:
+        HTTPException: If input is invalid or database error occurs.
+    """
+    if not isinstance(question_id, int) or question_id <= 0:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid question_id"
+        )
+    if not isinstance(user_id, int) or user_id <= 0:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid user_id"
+        )
+    if not isinstance(hints_used, int) or hints_used < 0:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="hints_used must be a non-negative integer"
+        )
+
+    try:
+        attempt = QuizAttempt(
+            user_id=user_id,
+            question_id=question_id,
+            is_correct=is_correct,
+            hints_used=hints_used
+        )
+        db.add(attempt)
+        await db.commit()
+
+        return {
+            "message": "Attempt recorded successfully",
+            "is_correct": is_correct
+        }
+    except Exception as e:
+        await db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to submit attempt: {str(e)}"
+        ) from e
 
 
