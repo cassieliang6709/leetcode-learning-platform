@@ -53,6 +53,13 @@ def hash_password(password: str) -> str:
     """
     if not password or not isinstance(password, str):
         raise ValueError("Password must be a non-empty string")
+    
+    # bcrypt has a 72-byte limit, truncate if necessary
+    # Encode to bytes to check length accurately
+    password_bytes = password.encode('utf-8')
+    if len(password_bytes) > 72:
+        password = password_bytes[:72].decode('utf-8', errors='ignore')
+    
     return pwd_context.hash(password)
 
 
