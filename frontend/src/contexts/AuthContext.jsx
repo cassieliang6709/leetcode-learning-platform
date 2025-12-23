@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, useEffect } from 'react';
+import api from '../services/api';
 
 const AuthContext = createContext(null);
 
@@ -19,49 +20,33 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   const login = async (username, password) => {
-    const response = await fetch('http://localhost:8000/api/auth/login', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ username, password }),
-    });
-
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.detail || 'Login failed');
-    }
-
-    const data = await response.json();
+    try {
+      const response = await api.login(username, password);
+      const data = response.data;
     setToken(data.access_token);
     setUser(data.user);
     localStorage.setItem('token', data.access_token);
     localStorage.setItem('user', JSON.stringify(data.user));
-    
     return data;
+    } catch (error) {
+      const errorMessage = error.response?.data?.detail || error.message || 'Login failed';
+      throw new Error(errorMessage);
+    }
   };
 
   const register = async (username, email, password) => {
-    const response = await fetch('http://localhost:8000/api/auth/register', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ username, email, password }),
-    });
-
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.detail || 'Registration failed');
-    }
-
-    const data = await response.json();
+    try {
+      const response = await api.register(username, email, password);
+      const data = response.data;
     setToken(data.access_token);
     setUser(data.user);
     localStorage.setItem('token', data.access_token);
     localStorage.setItem('user', JSON.stringify(data.user));
-    
     return data;
+    } catch (error) {
+      const errorMessage = error.response?.data?.detail || error.message || 'Registration failed';
+      throw new Error(errorMessage);
+    }
   };
 
   const logout = () => {
@@ -91,6 +76,7 @@ export const useAuth = () => {
   }
   return context;
 };
+
 
 
 

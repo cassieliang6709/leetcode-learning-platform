@@ -58,6 +58,7 @@ function RegisterPage() {
               value={username}
               onChange={(e) => setUsername(e.target.value)}
               placeholder="Choose a username"
+              autoComplete="username"
               required
               disabled={loading}
               minLength={3}
@@ -72,6 +73,7 @@ function RegisterPage() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="Enter your email"
+              autoComplete="email"
               required
               disabled={loading}
             />
@@ -85,6 +87,7 @@ function RegisterPage() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="Create a password"
+              autoComplete="new-password"
               required
               disabled={loading}
               minLength={6}
@@ -99,6 +102,7 @@ function RegisterPage() {
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
               placeholder="Confirm your password"
+              autoComplete="new-password"
               required
               disabled={loading}
               minLength={6}
@@ -121,6 +125,9 @@ function RegisterPage() {
 }
 
 export default RegisterPage;
+
+
+
 
 
 

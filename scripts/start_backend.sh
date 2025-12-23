@@ -28,5 +28,5 @@ echo -e "${GREEN}✅ Backend service starting...${NC}"
 echo -e "${BLUE}🔧 API URL: http://localhost:8000${NC}"
 echo -e "${BLUE}📚 API Docs: http://localhost:8000/docs${NC}"
 
-uvicorn main:app --reload --port 8000
+uvicorn main:app --reload --host localhost --port 8000
 

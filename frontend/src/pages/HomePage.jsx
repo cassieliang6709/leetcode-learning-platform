@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, Link } from 'react-router-dom'
+import { useAuth } from '../contexts/AuthContext'
 import { api } from '../services/api'
 import './HomePage.css'
 
@@ -12,14 +13,20 @@ const HomePage = () => {
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
   const navigate = useNavigate()
+  const { isAuthenticated, user } = useAuth()
   
-  const userId = 1 // TODO: Get from auth context
+  const userId = user?.id
 
   useEffect(() => {
     loadDailyQuiz()
   }, [])
 
   const loadDailyQuiz = async () => {
+    if (!isAuthenticated) {
+      setLoading(false)
+      return
+    }
+    
     setLoading(true)
     try {
       const response = await api.getDailyQuiz(userId)
@@ -151,12 +158,88 @@ const HomePage = () => {
         </div>
       </section>
 
+      {/* Guest Mode Notice */}
+      {!isAuthenticated && (
+        <section className="guest-notice-section" style={{
+          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+          borderRadius: '12px',
+          padding: '2rem',
+          marginBottom: '2rem',
+          color: 'white',
+          textAlign: 'center'
+        }}>
+          <h2 style={{ marginBottom: '1rem', fontSize: '1.5rem' }}>👋 欢迎使用 AlgoMentor！</h2>
+          <p style={{ marginBottom: '1.5rem', opacity: 0.9 }}>
+            你现在以游客模式浏览，可以查看大部分内容。登录后可以保存进度、查看个人统计和获得更多功能。
+          </p>
+          <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center' }}>
+            <Link 
+              to="/login" 
+              style={{
+                padding: '0.75rem 1.5rem',
+                background: 'white',
+                color: '#667eea',
+                borderRadius: '8px',
+                textDecoration: 'none',
+                fontWeight: '600',
+                transition: 'transform 0.2s'
+              }}
+            >
+              登录
+            </Link>
+            <Link 
+              to="/register" 
+              style={{
+                padding: '0.75rem 1.5rem',
+                background: 'rgba(255, 255, 255, 0.2)',
+                color: 'white',
+                border: '2px solid white',
+                borderRadius: '8px',
+                textDecoration: 'none',
+                fontWeight: '600',
+                transition: 'transform 0.2s'
+              }}
+            >
+              注册
+            </Link>
+          </div>
+        </section>
+      )}
+
       {/* Daily Challenge Section */}
       <section className="challenge-section">
         <div className="section-header">
           <h2 className="section-title">📅 Daily Knowledge Challenge</h2>
           <p className="section-subtitle">3 curated problems daily to strengthen your algorithm foundation</p>
         </div>
+        
+        {!isAuthenticated ? (
+          <div style={{
+            textAlign: 'center',
+            padding: '3rem',
+            background: 'var(--bg-primary)',
+            borderRadius: '12px',
+            border: '1px solid var(--border-color)'
+          }}>
+            <p style={{ marginBottom: '1rem', color: 'var(--text-secondary)' }}>
+              💡 登录后可以参与每日挑战并保存进度
+            </p>
+            <Link 
+              to="/login" 
+              style={{
+                display: 'inline-block',
+                padding: '0.75rem 1.5rem',
+                background: 'var(--accent-primary)',
+                color: 'white',
+                borderRadius: '8px',
+                textDecoration: 'none',
+                fontWeight: '600'
+              }}
+            >
+              立即登录
+            </Link>
+          </div>
+        ) : (
 
         <div className="challenge-container">
           {/* Progress Sidebar */}
@@ -300,6 +383,7 @@ const HomePage = () => {
               )
             })}
           </div>
+        )}
         </div>
       </section>
 

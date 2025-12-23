@@ -45,7 +45,7 @@ source venv/bin/activate
 pip install -q -r requirements.txt
 
 # Start backend (background)
-uvicorn main:app --reload --port 8000 > /tmp/backend.log 2>&1 &
+uvicorn main:app --reload --host localhost --port 8000 > /tmp/backend.log 2>&1 &
 BACKEND_PID=$!
 echo -e "${GREEN}✅ Backend started successfully (PID: $BACKEND_PID)${NC}"
 

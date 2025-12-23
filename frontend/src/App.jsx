@@ -18,7 +18,18 @@ function ProtectedRoute({ children }) {
     return <div className="loading-screen">Loading...</div>
   }
   
-  return isAuthenticated ? children : <Navigate to="/login" replace />
+  if (!isAuthenticated) {
+    return (
+      <div style={{ padding: '2rem', textAlign: 'center' }}>
+        <h2>需要登录</h2>
+        <p>此功能需要登录后才能使用</p>
+        <Link to="/login" style={{ marginRight: '1rem' }}>登录</Link>
+        <Link to="/register">注册</Link>
+      </div>
+    )
+  }
+  
+  return children
 }
 
 function AppContent() {
@@ -28,40 +39,48 @@ function AppContent() {
   return (
     <Router>
       <div className="app">
-        {isAuthenticated && (
-          <nav className="navbar">
-            <div className="nav-container">
-              <div className="nav-left">
+        <nav className="navbar">
+          <div className="nav-container">
+            <div className="nav-left">
+              <Link to="/" style={{ textDecoration: 'none', color: 'inherit' }}>
                 <h1 className="logo">💻 AlgoMentor</h1>
+              </Link>
+            </div>
+            <div className="nav-right">
+              <div className="nav-links">
+                <Link to="/">Home</Link>
+                <Link to="/roadmap">Roadmap</Link>
+                <Link to="/code-check">Code Check</Link>
               </div>
-              <div className="nav-right">
-                <div className="nav-links">
-                  <Link to="/">Home</Link>
-                  <Link to="/roadmap">Roadmap</Link>
-                  <Link to="/code-check">Code Check</Link>
-                </div>
+              {isAuthenticated ? (
                 <div className="user-info">
                   <span className="username">👤 {user?.username}</span>
                   <button className="logout-button" onClick={logout}>Logout</button>
                 </div>
-                <button className="theme-toggle" onClick={toggleTheme} aria-label="Toggle theme">
-                  {isDark ? '☀️' : '🌙'}
-                </button>
-              </div>
+              ) : (
+                <div className="auth-links">
+                  <Link to="/login" className="login-link">Login</Link>
+                  <Link to="/register" className="register-link">Sign Up</Link>
+                </div>
+              )}
+              <button className="theme-toggle" onClick={toggleTheme} aria-label="Toggle theme">
+                {isDark ? '☀️' : '🌙'}
+              </button>
             </div>
-          </nav>
-        )}
+          </div>
+        </nav>
 
         <main className="main-content">
           <Routes>
             <Route path="/login" element={<LoginPage />} />
             <Route path="/register" element={<RegisterPage />} />
-            <Route path="/" element={<ProtectedRoute><HomePage /></ProtectedRoute>} />
-            <Route path="/roadmap" element={<ProtectedRoute><RoadmapPage /></ProtectedRoute>} />
-            <Route path="/roadmap/:pointId/learn" element={<ProtectedRoute><LearningPage /></ProtectedRoute>} />
-            <Route path="/quiz/:knowledgePointId" element={<ProtectedRoute><QuizPage /></ProtectedRoute>} />
-            <Route path="/code-check" element={<ProtectedRoute><CodeCheckPage /></ProtectedRoute>} />
-            <Route path="/code-check/:questionId" element={<ProtectedRoute><CodeCheckPage /></ProtectedRoute>} />
+            {/* 游客模式：大部分页面无需登录 */}
+            <Route path="/" element={<HomePage />} />
+            <Route path="/roadmap" element={<RoadmapPage />} />
+            <Route path="/roadmap/:pointId/learn" element={<LearningPage />} />
+            <Route path="/quiz/:knowledgePointId" element={<QuizPage />} />
+            <Route path="/code-check" element={<CodeCheckPage />} />
+            <Route path="/code-check/:questionId" element={<CodeCheckPage />} />
           </Routes>
         </main>
       </div>
