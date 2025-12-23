@@ -26,6 +26,18 @@ DATABASE_URL = os.getenv(
     f"postgresql+asyncpg://{CURRENT_USER}@localhost:5432/leetcode_learning"
 )
 
+# Remove pgbouncer parameter if present (asyncpg doesn't support it)
+# Use direct connection port (5432) instead of pooler port (6543)
+if DATABASE_URL:
+    # Remove pgbouncer query parameter
+    if "?pgbouncer" in DATABASE_URL:
+        DATABASE_URL = DATABASE_URL.split("?pgbouncer")[0]
+    if "&pgbouncer" in DATABASE_URL:
+        DATABASE_URL = DATABASE_URL.split("&pgbouncer")[0]
+    # Replace pooler port (6543) with direct port (5432) for asyncpg
+    if ":6543/" in DATABASE_URL:
+        DATABASE_URL = DATABASE_URL.replace(":6543/", ":5432/")
+
 engine: AsyncEngine = create_async_engine(
     DATABASE_URL,
     poolclass=NullPool,
