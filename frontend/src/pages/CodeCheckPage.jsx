@@ -4,7 +4,7 @@ import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import rehypeHighlight from 'rehype-highlight'
 import Editor from '@monaco-editor/react'
-import 'highlight.js/styles/github-dark.css'
+import 'highlight.js/styles/github.css'
 import './NeetCodeStyle.css'
 
 const CodeCheckPage = () => {
@@ -34,6 +34,7 @@ const CodeCheckPage = () => {
   // NeetCode style additional states
   const [descWidth, setDescWidth] = useState('40%')
   const [isConsoleOpen, setIsConsoleOpen] = useState(true)
+  const [runMode, setRunMode] = useState('run') // 'run' | 'submit'
   const [hintsExpanded, setHintsExpanded] = useState(false)
   const [isResizing, setIsResizing] = useState(false)
   const [showProblemsDrawer, setShowProblemsDrawer] = useState(false)
@@ -116,52 +117,46 @@ const CodeCheckPage = () => {
     }
   }
 
-  const handleSubmit = async () => {
+  const executeCode = async (mode) => {
     if (!code.trim()) {
       alert('Please enter your code first')
       return
     }
-
     if (!questionId) {
       alert('Please select a problem first')
       return
     }
 
+    setRunMode(mode)
     setLoading(true)
     setActiveTab('result')
     setTestResults(null)
     setAiSuggestion(null)
     setOptimizationSuggestion(null)
-    
+
     try {
       const response = await api.submitCode(questionId, code, language)
       setTestResults(response.data)
-      
-      // Check if any tests failed
-      const hasFailed = response.data.summary?.failed > 0
-      
-      if (hasFailed) {
-        // Automatically get AI suggestion for failed tests
-        fetchAiSuggestion(response.data.test_results)
-      } else {
-        // All tests passed - get optimization suggestions
-        fetchOptimizationSuggestion()
+
+      // Only fetch AI suggestions on Submit mode
+      if (mode === 'submit') {
+        const hasFailed = response.data.summary?.failed > 0
+        if (hasFailed) {
+          fetchAiSuggestion(response.data.test_results)
+        } else {
+          fetchOptimizationSuggestion()
+        }
       }
-      
-      // Also save to code check history (auth handled server-side via JWT)
-      await api.checkCode({
-        question_id: questionId,
-        code: code,
-        language: language,
-        notes: notes
-      })
     } catch (error) {
-      console.error('Error submitting code:', error)
-      alert(error.response?.data?.detail || 'Failed to submit code. Please try again.')
+      console.error('Error running code:', error)
+      alert(error.response?.data?.detail || 'Failed to run code. Please try again.')
     } finally {
       setLoading(false)
     }
   }
+
+  const handleRunCode = () => executeCode('run')
+  const handleSubmit  = () => executeCode('submit')
 
   const fetchAiSuggestion = async (testResults) => {
     if (!questionId || !code) return
@@ -449,12 +444,20 @@ const CodeCheckPage = () => {
           <option value="cpp">C++</option>
         </select>
         
-        <button 
-          className="btn-submit" 
+        <button
+          className="btn-run"
+          onClick={handleRunCode}
+          disabled={loading}
+        >
+          {loading && runMode === 'run' ? '⏳ Running...' : '▶ Run Code'}
+        </button>
+
+        <button
+          className="btn-submit"
           onClick={handleSubmit}
           disabled={loading}
         >
-          {loading ? '⏳ Submitting...' : '✓ Submit'}
+          {loading && runMode === 'submit' ? '⏳ Submitting...' : '✓ Submit'}
         </button>
       </div>
 
@@ -566,7 +569,7 @@ const CodeCheckPage = () => {
               language={language}
               value={code}
               onChange={(value) => setCode(value || '')}
-              theme="vs-dark"
+              theme="light"
               options={{
                 minimap: { enabled: false },
                 fontSize: 14,
@@ -664,18 +667,28 @@ const CodeCheckPage = () => {
                   </div>
                 )}
 
-                {/* Test Results from Submit */}
+                {/* Test Results from Run/Submit */}
                 {testResults && !loading && (
                   <div className="test-results">
-                    <div className={`result-summary ${testResults.summary?.passed === testResults.summary?.total ? 'success' : 'error'}`}>
-                      <h3>
-                        {testResults.summary?.passed === testResults.summary?.total ? '✅ Accepted' : '❌ Wrong Answer'}
-                      </h3>
-                      <p>
-                        {testResults.summary?.passed} / {testResults.summary?.total} test cases passed 
-                        ({testResults.summary?.pass_rate?.toFixed(1)}%)
-                      </p>
-                    </div>
+                    {runMode === 'run' ? (
+                      <div className="result-badge-run">
+                        <h3>▶ Code Run</h3>
+                        <p>
+                          {testResults.summary?.passed} / {testResults.summary?.total} test cases passed
+                          ({testResults.summary?.pass_rate?.toFixed(1)}%)
+                        </p>
+                      </div>
+                    ) : (
+                      <div className={`result-summary ${testResults.summary?.passed === testResults.summary?.total ? 'success' : 'error'}`}>
+                        <h3>
+                          {testResults.summary?.passed === testResults.summary?.total ? '✅ Accepted' : '❌ Wrong Answer'}
+                        </h3>
+                        <p>
+                          {testResults.summary?.passed} / {testResults.summary?.total} test cases passed
+                          ({testResults.summary?.pass_rate?.toFixed(1)}%)
+                        </p>
+                      </div>
+                    )}
 
                   {/* AI Suggestion for Failed Tests */}
                   {testResults.summary?.failed > 0 && (
@@ -833,7 +846,7 @@ const CodeCheckPage = () => {
 
                 {!result && !loading && !testResults && (
                   <div className="empty-state">
-                    <p>Submit your code to see test results</p>
+                    <p>Run or submit your code to see results</p>
                   </div>
                 )}
               </div>
@@ -983,18 +996,28 @@ const CodeCheckPage = () => {
             </div>
             
             <div className="result-maximized-content">
-              {/* Test Results from Submit */}
+              {/* Test Results from Run/Submit */}
               {testResults && (
                 <div className="test-results">
-                  <div className={`result-summary ${testResults.summary?.passed === testResults.summary?.total ? 'success' : 'error'}`}>
-                    <h3>
-                      {testResults.summary?.passed === testResults.summary?.total ? '✅ Accepted' : '❌ Wrong Answer'}
-                    </h3>
-                    <p>
-                      {testResults.summary?.passed} / {testResults.summary?.total} test cases passed 
-                      ({testResults.summary?.pass_rate?.toFixed(1)}%)
-                    </p>
-                  </div>
+                  {runMode === 'run' ? (
+                    <div className="result-badge-run">
+                      <h3>▶ Code Run</h3>
+                      <p>
+                        {testResults.summary?.passed} / {testResults.summary?.total} test cases passed
+                        ({testResults.summary?.pass_rate?.toFixed(1)}%)
+                      </p>
+                    </div>
+                  ) : (
+                    <div className={`result-summary ${testResults.summary?.passed === testResults.summary?.total ? 'success' : 'error'}`}>
+                      <h3>
+                        {testResults.summary?.passed === testResults.summary?.total ? '✅ Accepted' : '❌ Wrong Answer'}
+                      </h3>
+                      <p>
+                        {testResults.summary?.passed} / {testResults.summary?.total} test cases passed
+                        ({testResults.summary?.pass_rate?.toFixed(1)}%)
+                      </p>
+                    </div>
+                  )}
 
                   {/* AI Suggestion for Failed Tests */}
                   {testResults.summary?.failed > 0 && (

@@ -153,33 +153,22 @@ async def get_current_user(
     if not token:
         return None
     
-    credentials_exception = HTTPException(
-        status_code=status.HTTP_401_UNAUTHORIZED,
-        detail="Could not validate credentials",
-        headers={"WWW-Authenticate": "Bearer"},
-    )
-    
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         user_id = payload.get("sub")
         if user_id is None:
-            raise credentials_exception
-        user_id = int(user_id)  # Ensure user_id is an integer
-    except (JWTError, ValueError, TypeError) as e:
-        raise credentials_exception from e
-    
+            return None
+        user_id = int(user_id)
+    except (JWTError, ValueError, TypeError):
+        # Invalid or expired token — treat as unauthenticated guest
+        return None
+
     try:
         result = await db.execute(select(User).where(User.id == user_id))
         user = result.scalar_one_or_none()
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Database error while fetching user: {e}"
-        ) from e
-    
-    if user is None:
-        raise credentials_exception
-    
+    except Exception:
+        return None
+
     return user
 
 
