@@ -21,7 +21,7 @@ from app.database import get_db
 from app.models import CodeSubmission, QuizQuestion, User
 from app.schemas import CodeSubmissionCreate, CodeCheckResponse
 from app.services.ai_service import get_hint_by_level
-from app.services.siliconflow_ai import get_ai_service
+from app.services.gemini_ai import get_ai_service
 from app.services.auth_service import get_current_user
 
 router = APIRouter()

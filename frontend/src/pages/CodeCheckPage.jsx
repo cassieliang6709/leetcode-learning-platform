@@ -566,7 +566,7 @@ const CodeCheckPage = () => {
               language={language}
               value={code}
               onChange={(value) => setCode(value || '')}
-              theme="vs"
+              theme="vs-dark"
               options={{
                 minimap: { enabled: false },
                 fontSize: 14,

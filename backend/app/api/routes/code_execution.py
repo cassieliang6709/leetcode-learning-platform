@@ -45,8 +45,8 @@ class CodeExecutionRequest(BaseModel):
 @limiter.limit("10/minute")
 async def submit_code(
     question_id: int,
-    request: CodeExecutionRequest,
-    http_request: Request,
+    body: CodeExecutionRequest,
+    request: Request,
     current_user: Optional[User] = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ) -> Dict[str, Any]:
@@ -76,12 +76,12 @@ async def submit_code(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Invalid question_id"
         )
-    if not request.code or not isinstance(request.code, str):
+    if not body.code or not isinstance(body.code, str):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Code must be a non-empty string"
         )
-    if not request.language or not isinstance(request.language, str):
+    if not body.language or not isinstance(body.language, str):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Language must be specified"
@@ -92,33 +92,33 @@ async def submit_code(
         stmt = select(QuizQuestion).where(QuizQuestion.id == question_id)
         result = await db.execute(stmt)
         question = result.scalar_one_or_none()
-        
+
         if not question:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Question not found"
             )
-        
+
         if not question.test_cases:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="This question has no test cases configured"
             )
-        
+
         # Execute code with test cases
         execution_result = await execute_user_code(
-            code=request.code,
-            language=request.language,
+            code=body.code,
+            language=body.language,
             test_cases=question.test_cases
         )
-        
+
         # Save submission only for authenticated users
         if current_user:
             submission = CodeSubmission(
                 user_id=current_user.id,
                 question_id=question_id,
-                code=request.code,
-                language=request.language,
+                code=body.code,
+                language=body.language,
                 ai_feedback={
                     "test_results": execution_result.get("test_results", []),
                     "summary": execution_result.get("summary", {})

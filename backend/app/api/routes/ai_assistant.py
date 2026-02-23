@@ -18,7 +18,7 @@ from sqlalchemy import select
 
 from app.database import get_db
 from app.models import QuizQuestion
-from app.services.siliconflow_ai import get_ai_service
+from app.services.gemini_ai import get_ai_service
 from app.services.rag_service import search_relevant_chunks, build_rag_context
 
 limiter = Limiter(key_func=get_remote_address)
@@ -169,8 +169,8 @@ async def get_failure_suggestion(
 @router.post("/chat")
 @limiter.limit("20/minute")
 async def chat_with_ai(
-    request: ChatRequest,
-    http_request: Request,
+    body: ChatRequest,
+    request: Request,
     db: AsyncSession = Depends(get_db)
 ) -> Dict[str, Any]:
     """
@@ -189,12 +189,12 @@ async def chat_with_ai(
     Raises:
         HTTPException: If question not found (404) or AI service fails (500).
     """
-    if not isinstance(request.question_id, int) or request.question_id <= 0:
+    if not isinstance(body.question_id, int) or body.question_id <= 0:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Invalid question_id"
         )
-    if not request.message or not isinstance(request.message, str):
+    if not body.message or not isinstance(body.message, str):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Message must be a non-empty string"
@@ -202,28 +202,28 @@ async def chat_with_ai(
 
     try:
         # Get problem description
-        stmt = select(QuizQuestion).where(QuizQuestion.id == request.question_id)
+        stmt = select(QuizQuestion).where(QuizQuestion.id == body.question_id)
         result = await db.execute(stmt)
         question = result.scalar_one_or_none()
-        
+
         if not question:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Question not found"
             )
-        
+
         # Convert chat history to dict format
         chat_history = None
-        if request.chat_history:
+        if body.chat_history:
             chat_history = [
                 {"role": msg.role, "content": msg.content}
-                for msg in request.chat_history
+                for msg in body.chat_history
                 if isinstance(msg, ChatMessage)
             ]
-        
+
         # RAG: retrieve relevant course material for this question
         rag_chunks = await search_relevant_chunks(
-            query=request.message,
+            query=body.message,
             db=db,
             knowledge_point_id=question.knowledge_point_id,
             top_k=3
@@ -235,9 +235,9 @@ async def chat_with_ai(
 
         # Get chat response (with RAG context injected into system prompt)
         chat_result = await ai_service.chat_about_code(
-            user_message=request.message,
-            code=request.code,
-            language=request.language,
+            user_message=body.message,
+            code=body.code,
+            language=body.language,
             problem_description=question.description or "",
             chat_history=chat_history,
             rag_context=rag_context
@@ -365,7 +365,7 @@ async def ai_health_check() -> Dict[str, Any]:
         
         return {
             "status": "healthy" if test_result.get("success", False) else "unhealthy",
-            "service": "SiliconFlow AI",
+            "service": "Gemini AI",
             "model": ai_service.model,
             "fallback_mode": ai_service.fallback_mode
         }
