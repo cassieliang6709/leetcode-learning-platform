@@ -12,10 +12,10 @@ Author: Yue Liang
 """
 
 import os
+import bcrypt as _bcrypt
 from datetime import datetime, timedelta, timezone
 from typing import Optional
 from jose import JWTError, jwt
-from passlib.context import CryptContext
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -32,15 +32,24 @@ SECRET_KEY = os.getenv(
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24 * 7  # 7 days
 
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 oauth2_scheme = OAuth2PasswordBearer(
     tokenUrl="/api/auth/login", auto_error=False
 )
 
 
+def _to_bcrypt_bytes(password: str) -> bytes:
+    """Encode password to UTF-8 bytes, truncated to bcrypt's 72-byte limit."""
+    b = password.encode("utf-8")
+    return b[:72] if len(b) > 72 else b
+
+
 def hash_password(password: str) -> str:
     """
     Hash a plain text password using bcrypt.
+
+    Uses bcrypt directly (bypassing passlib) for compatibility with
+    bcrypt 4.0+ which removed the __about__ attribute that passlib 1.7.4
+    relies on for version detection.
 
     Args:
         password: Plain text password to hash.
@@ -53,14 +62,7 @@ def hash_password(password: str) -> str:
     """
     if not password or not isinstance(password, str):
         raise ValueError("Password must be a non-empty string")
-    
-    # bcrypt has a 72-byte limit, truncate if necessary
-    # Encode to bytes to check length accurately
-    password_bytes = password.encode('utf-8')
-    if len(password_bytes) > 72:
-        password = password_bytes[:72].decode('utf-8', errors='ignore')
-    
-    return pwd_context.hash(password)
+    return _bcrypt.hashpw(_to_bcrypt_bytes(password), _bcrypt.gensalt()).decode("utf-8")
 
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
@@ -73,15 +75,18 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
 
     Returns:
         True if passwords match, False otherwise.
-
-    Raises:
-        ValueError: If either password is empty or invalid.
     """
     if not plain_password or not isinstance(plain_password, str):
         return False
     if not hashed_password or not isinstance(hashed_password, str):
         return False
-    return pwd_context.verify(plain_password, hashed_password)
+    try:
+        return _bcrypt.checkpw(
+            _to_bcrypt_bytes(plain_password),
+            hashed_password.encode("utf-8")
+        )
+    except Exception:
+        return False
 
 
 def create_access_token(

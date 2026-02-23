@@ -12,8 +12,7 @@ httpx==0.27.0  # For Piston API code execution
 aiohttp==3.9.1  # For SiliconFlow AI service
 email-validator>=2.2.0  # Required for pydantic EmailStr
 python-jose[cryptography]==3.3.0  # JWT token generation
-passlib[bcrypt]==1.7.4  # Password hashing
-bcrypt==4.0.1           # Pin to 4.0.1 for passlib 1.7.4 compatibility (5.x breaks it)
+bcrypt>=4.0.0           # Password hashing (used directly, passlib removed due to bcrypt 4.0+ incompatibility)
 
 # RAG dependencies
 pgvector==0.3.6               # pgvector SQLAlchemy integration
