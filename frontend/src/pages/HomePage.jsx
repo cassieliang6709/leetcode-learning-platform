@@ -168,13 +168,13 @@ const HomePage = () => {
           color: 'white',
           textAlign: 'center'
         }}>
-          <h2 style={{ marginBottom: '1rem', fontSize: '1.5rem' }}>👋 欢迎使用 AlgoMentor！</h2>
+          <h2 style={{ marginBottom: '1rem', fontSize: '1.5rem' }}>👋 Welcome to AlgoMentor!</h2>
           <p style={{ marginBottom: '1.5rem', opacity: 0.9 }}>
-            你现在以游客模式浏览，可以查看大部分内容。登录后可以保存进度、查看个人统计和获得更多功能。
+            You are browsing as a guest. Sign in to save your progress, view personal stats, and unlock more features.
           </p>
           <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center' }}>
-            <Link 
-              to="/login" 
+            <Link
+              to="/login"
               style={{
                 padding: '0.75rem 1.5rem',
                 background: 'white',
@@ -185,10 +185,10 @@ const HomePage = () => {
                 transition: 'transform 0.2s'
               }}
             >
-              登录
+              Sign In
             </Link>
-            <Link 
-              to="/register" 
+            <Link
+              to="/register"
               style={{
                 padding: '0.75rem 1.5rem',
                 background: 'rgba(255, 255, 255, 0.2)',
@@ -200,7 +200,7 @@ const HomePage = () => {
                 transition: 'transform 0.2s'
               }}
             >
-              注册
+              Sign Up
             </Link>
           </div>
         </section>
@@ -222,10 +222,10 @@ const HomePage = () => {
             border: '1px solid var(--border-color)'
           }}>
             <p style={{ marginBottom: '1rem', color: 'var(--text-secondary)' }}>
-              💡 登录后可以参与每日挑战并保存进度
+              💡 Sign in to participate in the daily challenge and save your progress
             </p>
-            <Link 
-              to="/login" 
+            <Link
+              to="/login"
               style={{
                 display: 'inline-block',
                 padding: '0.75rem 1.5rem',
@@ -236,7 +236,7 @@ const HomePage = () => {
                 fontWeight: '600'
               }}
             >
-              立即登录
+              Sign In Now
             </Link>
           </div>
         ) : (
@@ -383,8 +383,8 @@ const HomePage = () => {
               )
             })}
           </div>
-        )}
         </div>
+        )}
       </section>
 
       {/* Quick Actions */}

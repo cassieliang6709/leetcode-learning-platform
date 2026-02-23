@@ -29,10 +29,14 @@ apiClient.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
-      // Clear auth data and redirect to login
-      localStorage.removeItem('token')
-      localStorage.removeItem('user')
-      window.location.href = '/login'
+      const url = error.config?.url || ''
+      // Don't redirect on auth endpoints — let the form show the error message
+      const isAuthEndpoint = url.includes('/auth/login') || url.includes('/auth/register')
+      if (!isAuthEndpoint) {
+        localStorage.removeItem('token')
+        localStorage.removeItem('user')
+        window.location.href = '/login'
+      }
     }
     return Promise.reject(error)
   }
@@ -82,8 +86,8 @@ export const api = {
     apiClient.get(`/quiz/${questionId}/hint/${level}`),
 
   // Code check endpoints
-  checkCode: (userId, submissionData) =>
-    apiClient.post(`/code/check/${userId}`, submissionData),
+  checkCode: (submissionData) =>
+    apiClient.post('/code/check', submissionData),
   
   getProblems: (category = null, difficulty = null) =>
     apiClient.get('/code/problems', {

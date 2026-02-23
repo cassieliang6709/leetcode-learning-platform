@@ -21,10 +21,10 @@ function ProtectedRoute({ children }) {
   if (!isAuthenticated) {
     return (
       <div style={{ padding: '2rem', textAlign: 'center' }}>
-        <h2>需要登录</h2>
-        <p>此功能需要登录后才能使用</p>
-        <Link to="/login" style={{ marginRight: '1rem' }}>登录</Link>
-        <Link to="/register">注册</Link>
+        <h2>Login Required</h2>
+        <p>Please sign in to access this feature</p>
+        <Link to="/login" style={{ marginRight: '1rem' }}>Sign In</Link>
+        <Link to="/register">Sign Up</Link>
       </div>
     )
   }
@@ -74,7 +74,7 @@ function AppContent() {
           <Routes>
             <Route path="/login" element={<LoginPage />} />
             <Route path="/register" element={<RegisterPage />} />
-            {/* 游客模式：大部分页面无需登录 */}
+            {/* Guest mode: most pages are accessible without login */}
             <Route path="/" element={<HomePage />} />
             <Route path="/roadmap" element={<RoadmapPage />} />
             <Route path="/roadmap/:pointId/learn" element={<LearningPage />} />

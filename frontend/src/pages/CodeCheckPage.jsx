@@ -148,8 +148,8 @@ const CodeCheckPage = () => {
         fetchOptimizationSuggestion()
       }
       
-      // Also save to code check history
-      await api.checkCode(1, {
+      // Also save to code check history (auth handled server-side via JWT)
+      await api.checkCode({
         question_id: questionId,
         code: code,
         language: language,
@@ -305,7 +305,7 @@ const CodeCheckPage = () => {
     setActiveTab('result')
     
     try {
-      const response = await api.checkCode(1, {
+      const response = await api.checkCode({
         question_id: questionId,
         code: code,
         language: language,
