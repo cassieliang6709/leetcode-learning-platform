@@ -18,9 +18,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
 from app.database import get_db
-from app.models import CodeSubmission, QuizQuestion
+from app.models import CodeSubmission, QuizQuestion, User
 from app.schemas import CodeSubmissionCreate, CodeCheckResponse
-from app.services.ai_service import analyze_code, get_hint_by_level
+from app.services.ai_service import get_hint_by_level
+from app.services.siliconflow_ai import get_ai_service
+from app.services.auth_service import get_current_user
 
 router = APIRouter()
 
@@ -75,13 +77,19 @@ async def analyze_code_quick(
         )
 
     try:
-        analysis = await analyze_code(request.code, request.language)
-        
+        ai = get_ai_service()
+        # Use a minimal problem_description for standalone analysis
+        result = await ai.get_optimization_suggestions(
+            code=request.code,
+            language=request.language,
+            problem_description="Analyze this code for errors and improvements."
+        )
+        suggestions = [result.get("suggestions", "")] if result.get("success") else []
         return CodeCheckResponse(
-            has_errors=analysis.get("has_errors", False),
-            errors=analysis.get("errors", []),
-            suggestions=analysis.get("suggestions", []),
-            corrected_code=analysis.get("corrected_code")
+            has_errors=False,
+            errors=[result.get("error", "")] if not result.get("success") else [],
+            suggestions=suggestions,
+            corrected_code=None
         )
     except Exception as e:
         raise HTTPException(
@@ -90,35 +98,29 @@ async def analyze_code_quick(
         ) from e
 
 
-@router.post("/check/{user_id}", response_model=CodeCheckResponse)
+@router.post("/check", response_model=CodeCheckResponse)
 async def check_code(
-    user_id: int,
     submission: CodeSubmissionCreate,
+    current_user: Optional[User] = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ) -> CodeCheckResponse:
     """
-    Check code for errors and provide AI feedback, save to database.
+    Check code for errors and provide AI feedback, optionally save to database.
 
-    Analyzes code using AI service and saves the submission to database
-    for history tracking.
+    Analyzes code using SiliconFlow AI and saves the submission to database
+    for authenticated users. Guest users receive analysis without persistence.
 
     Args:
-        user_id: ID of the user.
         submission: CodeSubmissionCreate with code, language, and optional notes.
+        current_user: Authenticated user from JWT token, or None for guests.
         db: Database session dependency.
 
     Returns:
         CodeCheckResponse with analysis results.
 
     Raises:
-        HTTPException: If user_id is invalid, question not found (404),
-            or analysis fails (500).
+        HTTPException: If question not found (404) or analysis fails (500).
     """
-    if not isinstance(user_id, int) or user_id <= 0:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Invalid user_id"
-        )
     if not submission.code or not isinstance(submission.code, str):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -126,46 +128,55 @@ async def check_code(
         )
 
     try:
-        # Analyze code using AI
-        analysis = await analyze_code(submission.code, submission.language)
+        ai = get_ai_service()
+        result = await ai.get_optimization_suggestions(
+            code=submission.code,
+            language=submission.language,
+            problem_description="Analyze this code for errors and improvements."
+        )
+
+        suggestions = [result.get("suggestions", "")] if result.get("success") else []
+        errors = [result.get("error", "")] if not result.get("success") else []
+        analysis = {"suggestions": suggestions, "errors": errors, "has_errors": bool(errors)}
 
         # Verify question exists if provided
         if submission.question_id:
-            result = await db.execute(
-                select(QuizQuestion).where(
-                    QuizQuestion.id == submission.question_id
-                )
+            q_result = await db.execute(
+                select(QuizQuestion).where(QuizQuestion.id == submission.question_id)
             )
-            question = result.scalar_one_or_none()
-            if not question:
+            if not q_result.scalar_one_or_none():
                 raise HTTPException(
                     status_code=status.HTTP_404_NOT_FOUND,
                     detail="Question not found"
                 )
-        
-        # Save submission
-        code_sub = CodeSubmission(
-            user_id=user_id,
-            question_id=submission.question_id,
-            code=submission.code,
-            language=submission.language,
-            ai_feedback=analysis,
-            notes=submission.notes
+
+        # Save submission only for authenticated users
+        if current_user:
+            code_sub = CodeSubmission(
+                user_id=current_user.id,
+                question_id=submission.question_id,
+                code=submission.code,
+                language=submission.language,
+                ai_feedback=analysis,
+                notes=submission.notes
+            )
+            db.add(code_sub)
+            await db.commit()
+
+        return CodeCheckResponse(
+            has_errors=bool(errors),
+            errors=errors,
+            suggestions=suggestions,
+            corrected_code=None
         )
-        db.add(code_sub)
-        await db.commit()
     except HTTPException:
         raise
     except Exception as e:
         await db.rollback()
-        # Still return analysis even if save fails
-    
-    return CodeCheckResponse(
-        has_errors=analysis.get("has_errors", False),
-        errors=analysis.get("errors", []),
-        suggestions=analysis.get("suggestions", []),
-        corrected_code=analysis.get("corrected_code")
-    )
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to check code: {str(e)}"
+        ) from e
 
 
 @router.get("/hint/{question_id}/{hint_level}")

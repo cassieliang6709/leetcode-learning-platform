@@ -11,6 +11,7 @@ with comprehensive error handling and timeout management.
 Author: Yue Liang
 """
 
+import os
 from typing import Dict, List, Any, Optional
 import httpx
 
@@ -19,19 +20,27 @@ class PistonExecutor:
     """
     Piston API client for executing code in multiple languages.
 
-    Provides safe code execution in isolated sandboxes with support
+    Provides safe code execution in isolated Docker sandboxes with support
     for multiple programming languages. Handles code preprocessing,
     execution, and result parsing.
+
+    By default, connects to the self-hosted Piston instance defined by
+    PISTON_URL environment variable. Falls back to the public Piston API
+    when PISTON_URL is not set (for Railway/cloud deployment without Docker).
 
     Official API: https://github.com/engineer-man/piston
 
     Attributes:
-        BASE_URL: Base URL for Piston API.
+        BASE_URL: Base URL for Piston API (from PISTON_URL env var).
         LANGUAGE_MAP: Mapping of language names to runtime identifiers.
         client: HTTP client for API requests.
     """
-    
-    BASE_URL: str = "https://emkc.org/api/v2/piston"
+
+    # PISTON_URL=http://piston:2000/api/v2  when running in Docker Compose
+    # Falls back to public API if env var not set
+    BASE_URL: str = os.getenv(
+        "PISTON_URL", "https://emkc.org/api/v2/piston"
+    )
     
     # Language runtime mappings
     LANGUAGE_MAP: Dict[str, str] = {
@@ -116,10 +125,10 @@ class PistonExecutor:
             ],
             "stdin": stdin,
             "args": args or [],
-            "compile_timeout": 10000,  # 10 seconds
-            "run_timeout": 5000,       # 5 seconds
-            "compile_memory_limit": -1,
-            "run_memory_limit": -1
+            "compile_timeout": 10000,           # 10 seconds
+            "run_timeout": 5000,                # 5 seconds
+            "compile_memory_limit": 268435456,  # 256MB
+            "run_memory_limit": 134217728       # 128MB
         }
         
         try:

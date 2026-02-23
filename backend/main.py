@@ -11,16 +11,28 @@ Author: Yue Liang
 from contextlib import asynccontextmanager
 from typing import AsyncGenerator
 from dotenv import load_dotenv
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.util import get_remote_address
+from slowapi.errors import RateLimitExceeded
 
 # Load environment variables
 load_dotenv()
 
 from app.api.routes import (
-    knowledge, quiz, code_check, code_execution, ai_assistant, auth
+    knowledge, quiz, code_check, code_execution, ai_assistant, auth, rag
 )
 from app.database import init_db
+
+# Rate limiter: keyed by client IP, uses in-memory storage by default
+# Set REDIS_URL env var to use Redis for distributed rate limiting
+import os
+redis_url = os.getenv("REDIS_URL")
+limiter = Limiter(
+    key_func=get_remote_address,
+    storage_uri=redis_url or "memory://"
+)
 
 
 @asynccontextmanager
@@ -51,6 +63,10 @@ app = FastAPI(
     lifespan=lifespan
 )
 
+# Attach rate limiter and its 429 error handler
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
 # CORS middleware configuration
 app.add_middleware(
     CORSMiddleware,
@@ -78,6 +94,7 @@ app.include_router(
 app.include_router(
     ai_assistant.router, prefix="/api/ai", tags=["ai-assistant"]
 )
+app.include_router(rag.router, prefix="/api/rag", tags=["rag"])
 
 
 @app.get("/")

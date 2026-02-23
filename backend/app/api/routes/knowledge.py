@@ -210,6 +210,31 @@ async def submit_knowledge_test(
         # Generate AI learning plan
         ai_plan = await generate_learning_plan(test_data.test_data, score)
 
+        # Replace hardcoded IDs with real KnowledgePoint IDs from DB.
+        # First try to match weak areas by category, then fall back to
+        # lowest-ID points to ensure FKs are always valid.
+        weak_areas = ai_plan.get("weak_areas", [])
+        if weak_areas:
+            weak_res = await db.execute(
+                select(KnowledgePoint.id)
+                .where(KnowledgePoint.category.in_(weak_areas))
+                .order_by(KnowledgePoint.id)
+                .limit(6)
+            )
+            matched_ids = [row[0] for row in weak_res.fetchall()]
+        else:
+            matched_ids = []
+
+        if not matched_ids:
+            # Fall back: recommend the first few knowledge points
+            fallback_res = await db.execute(
+                select(KnowledgePoint.id).order_by(KnowledgePoint.id).limit(3)
+            )
+            matched_ids = [row[0] for row in fallback_res.fetchall()]
+
+        if matched_ids:
+            ai_plan["recommended_points"] = matched_ids
+
         # Create learning plan entries
         for point_id in ai_plan.get("recommended_points", []):
             plan = LearningPlan(
@@ -270,10 +295,7 @@ async def get_learning_plan(
         plans = result.scalars().all()
 
         if not plans:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="No active learning plan found"
-            )
+            return {"plans": []}
 
         return {
             "plans": [

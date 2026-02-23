@@ -9,14 +9,19 @@ Author: Yue Liang
 """
 
 from typing import List, Dict, Any, Optional
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from pydantic import BaseModel
+from slowapi import Limiter
+from slowapi.util import get_remote_address
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
 from app.database import get_db
-from app.models import QuizQuestion, CodeSubmission
+from app.models import QuizQuestion, CodeSubmission, User
 from app.services.code_executor import execute_user_code, get_executor
+from app.services.auth_service import get_current_user
+
+limiter = Limiter(key_func=get_remote_address)
 
 router = APIRouter()
 
@@ -37,22 +42,25 @@ class CodeExecutionRequest(BaseModel):
 
 
 @router.post("/submit/{question_id}")
+@limiter.limit("10/minute")
 async def submit_code(
     question_id: int,
     request: CodeExecutionRequest,
-    user_id: int = 1,  # TODO: Get from auth
+    http_request: Request,
+    current_user: Optional[User] = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ) -> Dict[str, Any]:
     """
     Submit code for a specific question and run test cases.
 
     Executes user code against test cases and saves the submission
-    to the database.
+    to the database. Guest users (unauthenticated) can still run
+    code but their submissions are not persisted.
 
     Args:
         question_id: ID of the question.
         request: CodeExecutionRequest with code and language.
-        user_id: ID of the user (temporary, should come from auth).
+        current_user: Authenticated user from JWT token, or None for guests.
         db: Database session dependency.
 
     Returns:
@@ -104,19 +112,20 @@ async def submit_code(
             test_cases=question.test_cases
         )
         
-        # Save submission
-        submission = CodeSubmission(
-            user_id=user_id,
-            question_id=question_id,
-            code=request.code,
-            language=request.language,
-            ai_feedback={
-                "test_results": execution_result.get("test_results", []),
-                "summary": execution_result.get("summary", {})
-            }
-        )
-        db.add(submission)
-        await db.commit()
+        # Save submission only for authenticated users
+        if current_user:
+            submission = CodeSubmission(
+                user_id=current_user.id,
+                question_id=question_id,
+                code=request.code,
+                language=request.language,
+                ai_feedback={
+                    "test_results": execution_result.get("test_results", []),
+                    "summary": execution_result.get("summary", {})
+                }
+            )
+            db.add(submission)
+            await db.commit()
         
         return execution_result
     except HTTPException:
@@ -236,30 +245,30 @@ async def get_supported_languages() -> Dict[str, Any]:
         }
 
 
-@router.get("/submissions/{user_id}/recent")
+@router.get("/submissions/me/recent")
 async def get_recent_submissions(
-    user_id: int,
     limit: int = 10,
+    current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ) -> Dict[str, Any]:
     """
-    Get user's recent code submissions.
+    Get the authenticated user's recent code submissions.
 
     Args:
-        user_id: ID of the user.
         limit: Maximum number of submissions to return (default: 10).
+        current_user: Authenticated user from JWT token.
         db: Database session dependency.
 
     Returns:
         Dictionary containing list of recent submissions with metadata.
 
     Raises:
-        HTTPException: If user_id is invalid or database error occurs.
+        HTTPException: 401 if not authenticated, 400 if limit invalid.
     """
-    if not isinstance(user_id, int) or user_id <= 0:
+    if current_user is None:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Invalid user_id"
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Authentication required"
         )
     if not isinstance(limit, int) or limit <= 0 or limit > 100:
         raise HTTPException(
@@ -269,14 +278,14 @@ async def get_recent_submissions(
 
     try:
         stmt = select(CodeSubmission).where(
-            CodeSubmission.user_id == user_id
+            CodeSubmission.user_id == current_user.id
         ).order_by(
             CodeSubmission.created_at.desc()
         ).limit(limit)
-        
+
         result = await db.execute(stmt)
         submissions = result.scalars().all()
-        
+
         return {
             "submissions": [
                 {
@@ -294,6 +303,8 @@ async def get_recent_submissions(
                 for sub in submissions
             ]
         }
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,

@@ -13,6 +13,15 @@ aiohttp==3.9.1  # For SiliconFlow AI service
 email-validator>=2.2.0  # Required for pydantic EmailStr
 python-jose[cryptography]==3.3.0  # JWT token generation
 passlib[bcrypt]==1.7.4  # Password hashing
+bcrypt==4.0.1           # Pin to 4.0.1 for passlib 1.7.4 compatibility (5.x breaks it)
+
+# RAG dependencies
+pgvector==0.3.6               # pgvector SQLAlchemy integration
+sentence-transformers==3.3.1  # Local embedding model (all-MiniLM-L6-v2)
+
+# Rate limiting
+slowapi==0.1.9  # FastAPI rate limiting (Flask-Limiter style)
+redis==5.2.1    # Redis client for rate limit storage
 
 # Testing dependencies
 pytest==8.0.0

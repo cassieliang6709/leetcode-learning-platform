@@ -260,7 +260,8 @@ Be concise and encouraging. Use markdown formatting."""
         code: str,
         language: str,
         problem_description: str,
-        chat_history: Optional[List[Dict[str, str]]] = None
+        chat_history: Optional[List[Dict[str, str]]] = None,
+        rag_context: str = ""
     ) -> Dict[str, Any]:
         """
         Chat with AI about the code problem.
@@ -302,21 +303,29 @@ Be concise and encouraging. Use markdown formatting."""
 ```{language}
 {code}
 ```"""
-        
+
+        # Build system prompt, injecting RAG context when available
+        rag_section = f"\n\n{rag_context}" if rag_context else ""
+        system_prompt = (
+            f"You are a concise and helpful programming tutor for AlgoMentor. "
+            f"Help students understand coding problems, debug issues, and improve solutions."
+            f"{rag_section}"
+            f"\n\n**Response guidelines:**"
+            f"\n- Be brief and to the point - no unnecessary explanations"
+            f"\n- Use markdown formatting (headings, lists, bold, etc.)"
+            f"\n- Code blocks MUST use proper markdown: ```python or ```javascript etc."
+            f"\n- Use bullet points for multiple points"
+            f"\n- Maximum 2-3 short paragraphs unless asked for detail"
+            f"\n- Avoid excessive blank lines between paragraphs"
+            f"\n- Be encouraging but concise"
+            + ("\n- Reference the course materials above when relevant" if rag_context else "")
+        )
+
         # Build messages
         messages = [
             {
                 "role": "system",
-                "content": """You are a concise and helpful programming tutor. Help students understand coding problems, debug issues, and improve solutions.
-
-**Response guidelines:**
-- Be brief and to the point - no unnecessary explanations
-- Use markdown formatting (headings, lists, bold, etc.)
-- Code blocks MUST use proper markdown: ```python or ```javascript etc.
-- Use bullet points for multiple points
-- Maximum 2-3 short paragraphs unless asked for detail
-- Avoid excessive blank lines between paragraphs
-- Be encouraging but concise"""
+                "content": system_prompt
             },
             {
                 "role": "user",

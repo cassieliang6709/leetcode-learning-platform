@@ -1,0 +1,114 @@
+version: "3.9"
+
+# AlgoMentor - Full Local Stack
+#
+# Services:
+#   postgres  - PostgreSQL 16 with pgvector extension
+#   redis     - Redis 7 for rate limiting
+#   piston    - Self-hosted Docker-based code execution sandbox
+#   backend   - FastAPI application
+#
+# Usage:
+#   docker compose up --build       # First run (builds backend image)
+#   docker compose up               # Subsequent runs
+#   docker compose down             # Stop all services
+#
+# After first start, initialize Piston runtimes (one-time setup):
+#   docker compose exec piston /bin/sh
+#   > piston install python 3.10.0
+#   > piston install javascript 18.15.0
+#   > piston install java 15.0.2
+#   > exit
+
+services:
+
+  # ─── PostgreSQL with pgvector ─────────────────────────────────────────────
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: algomentor_postgres
+    environment:
+      POSTGRES_DB: algomentor
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./scripts/init_db.sql:/docker-entrypoint-initdb.d/01_init.sql
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d algomentor"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # ─── Redis (rate limiting storage) ────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    container_name: algomentor_redis
+    command: redis-server --save "" --appendonly no  # no persistence needed
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  # ─── Piston (self-hosted Docker code execution sandbox) ───────────────────
+  # Each code submission runs in an isolated Docker container with:
+  #   - Network isolation (no external access)
+  #   - 128MB memory limit
+  #   - 5-second CPU timeout
+  # Requires privileged mode to manage Docker containers internally.
+  piston:
+    image: ghcr.io/engineer-man/piston
+    container_name: algomentor_piston
+    privileged: true
+    ports:
+      - "2000:2000"
+    volumes:
+      - piston_data:/piston
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:2000/api/v2/runtimes || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+  # ─── FastAPI Backend ───────────────────────────────────────────────────────
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: algomentor_backend
+    environment:
+      # Database
+      DATABASE_URL: postgresql+asyncpg://postgres:postgres@postgres:5432/algomentor
+      # Redis rate limiting
+      REDIS_URL: redis://redis:6379
+      # Self-hosted Piston (Docker sandbox)
+      PISTON_URL: http://piston:2000/api/v2
+      # Auth
+      SECRET_KEY: ${SECRET_KEY:-dev-secret-change-in-production}
+      # AI (optional - falls back to demo mode if not set)
+      SILICONFLOW_API_KEY: ${SILICONFLOW_API_KEY:-}
+      # Debug
+      SQL_ECHO: "false"
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      piston:
+        condition: service_healthy
+    restart: unless-stopped
+    volumes:
+      # Mount for live reload during development (remove in production)
+      - ./backend:/app
+
+volumes:
+  postgres_data:
+  piston_data:

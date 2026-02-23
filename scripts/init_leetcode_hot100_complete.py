@@ -6,10 +6,14 @@ import asyncio
 import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).parent.parent))
+_root = Path(__file__).parent.parent
+_backend = _root / "backend"
+from dotenv import load_dotenv
+load_dotenv(_backend / ".env")
+sys.path.insert(0, str(_backend))
 
-from backend.app.database import AsyncSessionLocal, init_db
-from backend.app.models import KnowledgePoint, QuizQuestion
+from app.database import AsyncSessionLocal, init_db
+from app.models import KnowledgePoint, QuizQuestion
 
 
 # Template for generating hints based on problem category

@@ -12,6 +12,9 @@ from pathlib import Path
 backend_dir = Path(__file__).parent.parent / "backend"
 sys.path.insert(0, str(backend_dir))
 
+from dotenv import load_dotenv
+load_dotenv(backend_dir / ".env")
+
 from app.database import engine, Base, init_db
 from app.models import User, KnowledgePoint, QuizQuestion
 from sqlalchemy import text

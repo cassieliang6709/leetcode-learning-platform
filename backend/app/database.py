@@ -41,7 +41,7 @@ if DATABASE_URL:
 engine: AsyncEngine = create_async_engine(
     DATABASE_URL,
     poolclass=NullPool,
-    echo=True,
+    echo=os.getenv("SQL_ECHO", "false").lower() == "true",
 )
 
 AsyncSessionLocal = sessionmaker(

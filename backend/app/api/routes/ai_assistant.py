@@ -9,14 +9,19 @@ Author: Yue Liang
 """
 
 from typing import List, Dict, Any, Optional
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from pydantic import BaseModel
+from slowapi import Limiter
+from slowapi.util import get_remote_address
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
 from app.database import get_db
 from app.models import QuizQuestion
 from app.services.siliconflow_ai import get_ai_service
+from app.services.rag_service import search_relevant_chunks, build_rag_context
+
+limiter = Limiter(key_func=get_remote_address)
 
 router = APIRouter()
 
@@ -162,8 +167,10 @@ async def get_failure_suggestion(
 
 
 @router.post("/chat")
+@limiter.limit("20/minute")
 async def chat_with_ai(
     request: ChatRequest,
+    http_request: Request,
     db: AsyncSession = Depends(get_db)
 ) -> Dict[str, Any]:
     """
@@ -214,18 +221,28 @@ async def chat_with_ai(
                 if isinstance(msg, ChatMessage)
             ]
         
+        # RAG: retrieve relevant course material for this question
+        rag_chunks = await search_relevant_chunks(
+            query=request.message,
+            db=db,
+            knowledge_point_id=question.knowledge_point_id,
+            top_k=3
+        )
+        rag_context = build_rag_context(rag_chunks)
+
         # Get AI service
         ai_service = get_ai_service()
-        
-        # Get chat response
+
+        # Get chat response (with RAG context injected into system prompt)
         chat_result = await ai_service.chat_about_code(
             user_message=request.message,
             code=request.code,
             language=request.language,
             problem_description=question.description or "",
-            chat_history=chat_history
+            chat_history=chat_history,
+            rag_context=rag_context
         )
-        
+
         if not chat_result.get("success", False):
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -234,11 +251,12 @@ async def chat_with_ai(
                     f"{chat_result.get('error', 'Unknown error')}"
                 )
             )
-        
+
         return {
             "success": True,
             "response": chat_result.get("response", ""),
-            "usage": chat_result.get("usage", {})
+            "usage": chat_result.get("usage", {}),
+            "rag_sources": [c["knowledge_point_id"] for c in rag_chunks]
         }
     except HTTPException:
         raise
