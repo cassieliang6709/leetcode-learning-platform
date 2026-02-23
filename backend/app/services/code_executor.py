@@ -36,11 +36,12 @@ class PistonExecutor:
         client: HTTP client for API requests.
     """
 
-    # PISTON_URL=http://piston:2000/api/v2  when running in Docker Compose
-    # Falls back to public API if env var not set
+    # PISTON_URL: self-hosted e.g. http://piston:2000/api/v2 (Docker) or http://localhost:2000/api/v2
+    # Public API (emkc.org) requires PISTON_API_KEY as of Feb 2026 — get token from https://discord.gg/engineerman
     BASE_URL: str = os.getenv(
         "PISTON_URL", "https://emkc.org/api/v2/piston"
     )
+    PISTON_API_KEY: str = os.getenv("PISTON_API_KEY", "")
     
     # Language runtime mappings
     LANGUAGE_MAP: Dict[str, str] = {
@@ -131,16 +132,27 @@ class PistonExecutor:
             "run_memory_limit": 134217728       # 128MB
         }
         
+        headers = {}
+        if "emkc.org" in self.BASE_URL and self.PISTON_API_KEY:
+            headers["Authorization"] = f"Bearer {self.PISTON_API_KEY}"
         try:
             response = await self.client.post(
                 f"{self.BASE_URL}/execute",
-                json=payload
+                json=payload,
+                headers=headers or None
             )
+            if response.status_code == 401:
+                return {
+                    "success": False,
+                    "error": "Piston 公共 API 需要授权。请在 backend/.env 中设置 PISTON_API_KEY（向 https://discord.gg/engineerman 申请），或自建 Piston 并设置 PISTON_URL（如 http://localhost:2000/api/v2）。",
+                    "output": "",
+                    "compile_output": "",
+                    "run_time": 0,
+                    "memory": 0
+                }
             response.raise_for_status()
             result = response.json()
-            
             return self._parse_result(result)
-            
         except httpx.TimeoutException:
             return {
                 "success": False,
@@ -371,8 +383,13 @@ class PistonExecutor:
         Note:
             Returns empty list if API request fails.
         """
+        headers = {}
+        if "emkc.org" in self.BASE_URL and self.PISTON_API_KEY:
+            headers["Authorization"] = f"Bearer {self.PISTON_API_KEY}"
         try:
-            response = await self.client.get(f"{self.BASE_URL}/runtimes")
+            response = await self.client.get(f"{self.BASE_URL}/runtimes", headers=headers or None)
+            if response.status_code == 401:
+                return []
             response.raise_for_status()
             runtimes = response.json()
             
