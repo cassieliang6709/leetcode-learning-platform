@@ -292,6 +292,14 @@
 .unlock-hint-btn:hover:not(:disabled)  { border-color: #d97706; color: #d97706; background: #fffbeb; }
 .unlock-hint-btn:disabled { opacity: .4; cursor: not-allowed; }
 
+/* Hint desc sub-label */
+.hint-desc {
+  margin-left: auto;
+  font-size: 11px;
+  color: #9ca3af;
+  font-style: italic;
+}
+
 .hint-content { background: #fffbeb; border-radius: 6px; padding: .75rem; }
 .hint-label   { font-size: 11px; font-weight: 600; color: #d97706; margin-bottom: .4rem; text-transform: uppercase; letter-spacing: .5px; }
 .hint-text    { font-size: 13px; color: #3d3d3d; line-height: 1.6; }
@@ -698,22 +706,27 @@
 .markdown-content strong { font-weight: 600; color: #262626; }
 .markdown-content em     { font-style: italic; color: #6b7280; }
 .markdown-content code {
-  background: #f0f0f0;
-  color: #d63384;
+  background: #1e293b;
+  color: #e2e8f0;
   padding: .1rem .35rem;
   border-radius: 3px;
   font-size: 12px;
   font-family: "SFMono-Regular", Consolas, monospace;
 }
 .markdown-content pre {
-  background: #f7f7f7;
-  border: 1px solid #e4e4e7;
+  background: #0d1117;
+  border: 1px solid #30363d;
   border-radius: 6px;
   padding: .75rem 1rem;
   overflow-x: auto;
   margin: .5rem 0;
 }
-.markdown-content pre code { background: none; padding: 0; color: inherit; font-size: 13px; }
+.markdown-content pre code {
+  background: none;
+  padding: 0;
+  color: #c9d1d9;
+  font-size: 13px;
+}
 .markdown-content blockquote {
   border-left: 3px solid #d1d5db;
   margin: .5rem 0;
@@ -725,8 +738,8 @@
 
 /* ── Code block with copy button ─────────────────────────── */
 .code-block-container {
-  background: #f7f7f7;
-  border: 1px solid #e4e4e7;
+  background: #0d1117;
+  border: 1px solid #30363d;
   border-radius: 6px;
   overflow: hidden;
   margin: .5rem 0;
@@ -736,21 +749,21 @@
   justify-content: space-between;
   align-items: center;
   padding: .3rem .75rem;
-  background: #ebebeb;
-  border-bottom: 1px solid #e4e4e7;
+  background: #161b22;
+  border-bottom: 1px solid #30363d;
 }
-.code-language  { font-size: 11px; font-weight: 600; color: #9ca3af; text-transform: uppercase; }
+.code-language  { font-size: 11px; font-weight: 600; color: #8b949e; text-transform: uppercase; }
 .copy-code-btn {
   background: transparent;
   border: none;
-  color: #6b7280;
+  color: #8b949e;
   font-size: 11px;
   cursor: pointer;
   padding: .15rem .4rem;
   border-radius: 3px;
   transition: all .15s;
 }
-.copy-code-btn:hover { color: #262626; background: #d1d5db; }
+.copy-code-btn:hover { color: #c9d1d9; background: #21262d; }
 
 /* ── Maximized Results Window ────────────────────────────── */
 .result-maximized-overlay {
@@ -800,3 +813,128 @@
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 3px; }
 ::-webkit-scrollbar-thumb:hover { background: #9ca3af; }
+
+/* ── Drawer Search (RAG C) ────────────────────────────────── */
+.drawer-search {
+  padding: .6rem .75rem;
+  border-bottom: 1px solid #ebebeb;
+  display: flex;
+  align-items: center;
+  gap: .4rem;
+}
+.drawer-search-input {
+  flex: 1;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  padding: .35rem .6rem;
+  font-size: 13px;
+  outline: none;
+  background: #f9f9f9;
+}
+.drawer-search-input:focus { border-color: #3b82f6; background: #fff; }
+.search-loading { font-size: 12px; color: #9ca3af; }
+.drawer-section-label {
+  padding: .3rem .75rem;
+  font-size: 11px;
+  font-weight: 600;
+  color: #9ca3af;
+  text-transform: uppercase;
+  letter-spacing: .05em;
+  background: #f7f7f7;
+}
+
+/* ── Submissions Panel ────────────────────────────────────── */
+.submissions-panel {
+  padding: .75rem;
+  overflow-y: auto;
+  height: 100%;
+}
+.submissions-list { display: flex; flex-direction: column; gap: .5rem; }
+.submission-item {
+  border: 1px solid #ebebeb;
+  border-radius: 8px;
+  padding: .6rem .8rem;
+  background: #fff;
+  transition: background .15s;
+}
+.submission-item:hover { background: #f9f9f9; }
+.submission-item.passed { border-left: 3px solid #00b894; }
+.submission-item.failed { border-left: 3px solid #d63031; }
+.submission-header {
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+  margin-bottom: .2rem;
+}
+.submission-status { font-size: 13px; font-weight: 600; flex: 1; }
+.submission-status.accepted { color: #00b894; }
+.submission-status.wrong    { color: #d63031; }
+.submission-lang {
+  font-size: 11px;
+  background: #ebebeb;
+  border-radius: 4px;
+  padding: .1rem .4rem;
+  color: #636e72;
+}
+.submission-time { font-size: 11px; color: #9ca3af; }
+.submission-problem { font-size: 12px; color: #636e72; }
+
+/* ── RAG Source Badges (RAG D) ────────────────────────────── */
+.rag-sources {
+  margin-top: .5rem;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: .3rem;
+}
+.rag-sources-label {
+  font-size: 11px;
+  color: #9ca3af;
+  font-weight: 500;
+}
+.rag-source-badge {
+  font-size: 11px;
+  background: #eff6ff;
+  color: #3b82f6;
+  border: 1px solid #bfdbfe;
+  border-radius: 12px;
+  padding: .1rem .5rem;
+}
+
+/* ── AI Hint loading / error states ─────────────────────── */
+.hint-loading {
+  padding: .6rem .75rem;
+  border-radius: 6px;
+  background: #fffbeb;
+  color: #d97706;
+  font-size: 13px;
+  font-style: italic;
+  animation: pulse 1.2s ease-in-out infinite;
+}
+@keyframes pulse { 0%,100% { opacity: 1 } 50% { opacity: .5 } }
+
+.hint-error {
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+  padding: .5rem .75rem;
+  background: #fef2f2;
+  border-radius: 6px;
+  color: #dc2626;
+  font-size: 12px;
+}
+.hint-error button {
+  margin-left: auto;
+  font-size: 11px;
+  padding: .2rem .5rem;
+  border: 1px solid #dc2626;
+  border-radius: 4px;
+  background: transparent;
+  color: #dc2626;
+  cursor: pointer;
+}
+.hint-error button:hover { background: #dc2626; color: #fff; }
+
+/* AI hint markdown content uses same markdown styles but smaller */
+.hint-text.markdown-content p { margin: .25rem 0; font-size: 13px; }
+.hint-text.markdown-content pre { font-size: 12px; }

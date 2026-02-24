@@ -32,7 +32,9 @@ apiClient.interceptors.response.use(
       const url = error.config?.url || ''
       // Don't redirect on auth endpoints — let the form show the error message
       const isAuthEndpoint = url.includes('/auth/login') || url.includes('/auth/register')
-      if (!isAuthEndpoint) {
+      // Don't redirect for optional-auth endpoints — just let the caller handle 401
+      const isOptionalAuth = url.includes('/submissions/me/recent')
+      if (!isAuthEndpoint && !isOptionalAuth) {
         localStorage.removeItem('token')
         localStorage.removeItem('user')
         window.location.href = '/login'
@@ -138,12 +140,29 @@ export const api = {
       chat_history: chatHistory
     }),
   
+  getAIHint: (questionId, code, language, hintLevel, testResults = null) =>
+    apiClient.post('/ai/hint', {
+      question_id: questionId,
+      code,
+      language,
+      hint_level: hintLevel,
+      test_results: testResults
+    }),
+
   getOptimizationSuggestion: (questionId, code, language) =>
     apiClient.post('/ai/suggestion/optimization', {
       question_id: questionId,
       code,
       language
     }),
+
+  // Submission history
+  getRecentSubmissions: (limit = 10) =>
+    apiClient.get('/execution/submissions/me/recent', { params: { limit } }),
+
+  // Semantic problem search (RAG C)
+  semanticSearchProblems: (q, topK = 8) =>
+    apiClient.get('/rag/problems/search', { params: { q, top_k: topK } }),
 
   // Auth endpoints
   login: (username, password) =>

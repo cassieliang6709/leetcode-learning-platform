@@ -24,18 +24,41 @@ const RoadmapPage = () => {
     }
   }
 
+  // Category display config — maps DB category slug to display name + icon
+  const CATEGORY_META = {
+    array:                { name: 'Array & Hash',     icon: '📊' },
+    two_pointers:         { name: 'Two Pointers',     icon: '👆' },
+    sliding_window:       { name: 'Sliding Window',   icon: '🪟' },
+    binary_search:        { name: 'Binary Search',    icon: '🔍' },
+    linked_list:          { name: 'Linked List',      icon: '🔗' },
+    stack:                { name: 'Stack',             icon: '📚' },
+    tree:                 { name: 'Trees',             icon: '🌳' },
+    dynamic_programming:  { name: 'DP',               icon: '🎯' },
+    graph:                { name: 'Graphs',            icon: '🕸️' },
+    greedy:               { name: 'Greedy',            icon: '💡' },
+    backtracking:         { name: 'Backtracking',      icon: '🔄' },
+    heap:                 { name: 'Heap',              icon: '🏔️' },
+    bit:                  { name: 'Bit Manipulation',  icon: '⚡' },
+  }
+
+  // Derive unique categories that actually exist in the loaded data
+  const usedCategories = [...new Set(knowledgePoints.map(p => p.category).filter(Boolean))]
   const categories = [
-    { id: 'all', name: 'All Topics', icon: '📚' },
-    { id: 'array', name: 'Arrays', icon: '📊' },
-    { id: 'string', name: 'Strings', icon: '📝' },
-    { id: 'tree', name: 'Trees', icon: '🌳' },
-    { id: 'graph', name: 'Graphs', icon: '🕸️' },
-    { id: 'dp', name: 'Dynamic Programming', icon: '🎯' },
-    { id: 'other', name: 'Advanced', icon: '🔧' }
+    { id: 'all', name: 'All Topics', icon: '📖' },
+    ...usedCategories
+      .sort((a, b) => {
+        const order = Object.keys(CATEGORY_META)
+        return order.indexOf(a) - order.indexOf(b)
+      })
+      .map(id => ({
+        id,
+        name: CATEGORY_META[id]?.name || id,
+        icon: CATEGORY_META[id]?.icon || '📌',
+      }))
   ]
 
-  const filteredPoints = selectedCategory === 'all' 
-    ? knowledgePoints 
+  const filteredPoints = selectedCategory === 'all'
+    ? knowledgePoints
     : knowledgePoints.filter(point => point.category === selectedCategory)
 
   const handleSelectTopic = (pointId) => {

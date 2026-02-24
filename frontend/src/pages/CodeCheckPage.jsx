@@ -1,10 +1,10 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { api } from '../services/api'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import rehypeHighlight from 'rehype-highlight'
 import Editor from '@monaco-editor/react'
-import 'highlight.js/styles/github.css'
+import 'highlight.js/styles/github-dark.css'
 import './NeetCodeStyle.css'
 
 const CodeCheckPage = () => {
@@ -16,10 +16,10 @@ const CodeCheckPage = () => {
   const [result, setResult] = useState(null)
   const [loading, setLoading] = useState(false)
   const [notes, setNotes] = useState('')
-  const [hints, setHints] = useState({})
+  const [hints, setHints] = useState({})      // { level: { hint, ragSources, loading } }
   const [hintsUsed, setHintsUsed] = useState(0)
   const [testResults, setTestResults] = useState(null)
-  const [activeTab, setActiveTab] = useState('testcases') // 'testcases' or 'result'
+  const [activeTab, setActiveTab] = useState('testcases') // 'testcases' | 'result' | 'submissions'
   const [aiSuggestion, setAiSuggestion] = useState(null)
   const [loadingAiSuggestion, setLoadingAiSuggestion] = useState(false)
   const [showChatDialog, setShowChatDialog] = useState(false)
@@ -30,7 +30,16 @@ const CodeCheckPage = () => {
   const [isResultMaximized, setIsResultMaximized] = useState(false)
   const [optimizationSuggestion, setOptimizationSuggestion] = useState(null)
   const [loadingOptimization, setLoadingOptimization] = useState(false)
-  
+
+  // Submission history
+  const [submissions, setSubmissions] = useState([])
+  const [loadingSubmissions, setLoadingSubmissions] = useState(false)
+
+  // Problem search (RAG C)
+  const [searchQuery, setSearchQuery] = useState('')
+  const [searchResults, setSearchResults] = useState(null)
+  const [searchLoading, setSearchLoading] = useState(false)
+
   // NeetCode style additional states
   const [descWidth, setDescWidth] = useState('40%')
   const [isConsoleOpen, setIsConsoleOpen] = useState(true)
@@ -38,9 +47,10 @@ const CodeCheckPage = () => {
   const [hintsExpanded, setHintsExpanded] = useState(false)
   const [isResizing, setIsResizing] = useState(false)
   const [showProblemsDrawer, setShowProblemsDrawer] = useState(false)
-  
+
   const resizerRef = useRef(null)
   const splitPaneRef = useRef(null)
+  const searchTimeoutRef = useRef(null)
 
   useEffect(() => {
     loadProblems()
@@ -57,6 +67,40 @@ const CodeCheckPage = () => {
       console.error('Error loading problems:', error)
     }
   }
+
+  const loadRecentSubmissions = async () => {
+    try {
+      const token = localStorage.getItem('token')
+      if (!token) return
+      setLoadingSubmissions(true)
+      const response = await api.getRecentSubmissions(15)
+      setSubmissions(response.data.submissions || [])
+    } catch (error) {
+      // Not authenticated or no submissions — silently ignore
+    } finally {
+      setLoadingSubmissions(false)
+    }
+  }
+
+  const handleProblemSearch = useCallback((query) => {
+    setSearchQuery(query)
+    if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current)
+    if (!query.trim()) {
+      setSearchResults(null)
+      return
+    }
+    searchTimeoutRef.current = setTimeout(async () => {
+      setSearchLoading(true)
+      try {
+        const response = await api.semanticSearchProblems(query, 8)
+        setSearchResults(response.data.results)
+      } catch {
+        setSearchResults(null)
+      } finally {
+        setSearchLoading(false)
+      }
+    }, 400)
+  }, [])
 
   const selectProblem = async (problemId) => {
     try {
@@ -98,22 +142,34 @@ const CodeCheckPage = () => {
     }
   }
 
-  const requestHint = async (level) => {
+  const requestAIHint = async (level) => {
     if (!questionId) {
       alert('Please select a problem first')
       return
     }
+    if (!code.trim()) {
+      alert('Write some code first — the AI hint is tailored to your current attempt!')
+      return
+    }
+
+    // Mark this level as loading
+    setHints(prev => ({ ...prev, [level]: { loading: true } }))
 
     try {
-      const response = await api.requestCodeHint(questionId, level)
+      const currentTestResults = testResults?.test_results || null
+      const response = await api.getAIHint(questionId, code, language, level, currentTestResults)
       setHints(prev => ({
         ...prev,
-        [level]: response.data
+        [level]: {
+          loading: false,
+          hint: response.data.hint,
+          ragSources: response.data.rag_sources || []
+        }
       }))
       setHintsUsed(Math.max(hintsUsed, level))
     } catch (error) {
-      console.error('Error requesting hint:', error)
-      alert('Failed to get hint. Please try again.')
+      console.error('Error requesting AI hint:', error)
+      setHints(prev => ({ ...prev, [level]: { loading: false, error: 'Failed to get hint. Please try again.' } }))
     }
   }
 
@@ -225,11 +281,15 @@ const CodeCheckPage = () => {
         userMessage,
         chatHistory.length > 0 ? chatHistory : null
       )
-      
-      // Add AI response to history
+
+      // Add AI response with RAG sources (RAG D)
       setChatHistory([
         ...newHistory,
-        { role: 'assistant', content: response.data.response }
+        {
+          role: 'assistant',
+          content: response.data.response,
+          ragSources: response.data.rag_sources || []
+        }
       ])
     } catch (error) {
       console.error('Error chatting with AI:', error)
@@ -327,19 +387,28 @@ const CodeCheckPage = () => {
 
   const getHintIcon = (level) => {
     switch (level) {
-      case 1: return '💡'
-      case 2: return '💻'
-      case 3: return '🎥'
+      case 1: return '🤔'
+      case 2: return '🧭'
+      case 3: return '📝'
       default: return '❓'
     }
   }
 
   const getHintTitle = (level) => {
     switch (level) {
-      case 1: return 'Strategy Hint'
-      case 2: return 'Code Hint'
-      case 3: return 'Video Tutorial'
+      case 1: return 'Socratic Question'
+      case 2: return 'Direction Hint'
+      case 3: return 'Pseudocode'
       default: return 'Hint'
+    }
+  }
+
+  const getHintDesc = (level) => {
+    switch (level) {
+      case 1: return 'A guiding question — no spoilers'
+      case 2: return 'Algorithm pattern + approach'
+      case 3: return 'Pseudocode with TODO stubs'
+      default: return ''
     }
   }
 
@@ -364,8 +433,53 @@ const CodeCheckPage = () => {
                 ✕
               </button>
             </div>
+            {/* Search bar (RAG C) */}
+            <div className="drawer-search">
+              <input
+                type="text"
+                className="drawer-search-input"
+                placeholder="Search problems (e.g. sliding window, two sum)..."
+                value={searchQuery}
+                onChange={(e) => handleProblemSearch(e.target.value)}
+              />
+              {searchLoading && <span className="search-loading">...</span>}
+            </div>
+
             <div className="drawer-content">
-              {problems.map(prob => (
+              {/* Semantic search results */}
+              {searchQuery && searchResults !== null && (
+                <>
+                  <div className="drawer-section-label">
+                    {searchResults.length > 0
+                      ? `Semantic results for "${searchQuery}"`
+                      : `No results for "${searchQuery}"`}
+                  </div>
+                  {searchResults.map(prob => (
+                    <div
+                      key={prob.id}
+                      className={`drawer-problem-item ${questionId === prob.id ? 'active' : ''}`}
+                      onClick={() => {
+                        selectProblem(prob.id)
+                        setShowProblemsDrawer(false)
+                        setSearchQuery('')
+                        setSearchResults(null)
+                      }}
+                    >
+                      <div className="drawer-problem-header">
+                        <span className="drawer-problem-number">#{prob.leetcode_id}</span>
+                        <span className={`difficulty-badge ${prob.difficulty}`}>
+                          {prob.difficulty}
+                        </span>
+                      </div>
+                      <div className="drawer-problem-title">{prob.title}</div>
+                    </div>
+                  ))}
+                  <div className="drawer-section-label" style={{ marginTop: 12 }}>All Problems</div>
+                </>
+              )}
+
+              {/* All problems list */}
+              {(!searchQuery || searchResults === null) && problems.map(prob => (
                 <div
                   key={prob.id}
                   className={`drawer-problem-item ${questionId === prob.id ? 'active' : ''}`}
@@ -376,9 +490,7 @@ const CodeCheckPage = () => {
                 >
                   <div className="drawer-problem-header">
                     <span className="drawer-problem-number">#{prob.leetcode_id}</span>
-                    <span 
-                      className={`difficulty-badge ${prob.difficulty}`}
-                    >
+                    <span className={`difficulty-badge ${prob.difficulty}`}>
                       {prob.difficulty}
                     </span>
                   </div>
@@ -420,7 +532,7 @@ const CodeCheckPage = () => {
           onClick={() => setHintsExpanded(!hintsExpanded)}
           title="View Hints"
         >
-          💡 Hints ({Object.keys(hints).length}/3)
+          💡 Hints ({Object.keys(hints).filter(k => hints[k]?.hint).length}/3)
         </button>
         
         <button 
@@ -490,63 +602,75 @@ const CodeCheckPage = () => {
                 )}
               </div>
               
-              {/* ============ Hints Section (Collapsible) ============ */}
+              {/* ============ AI Hints Section (Collapsible) ============ */}
               <div className="hints-section">
-                <button 
+                <button
                   className="hints-header"
                   onClick={() => setHintsExpanded(!hintsExpanded)}
                 >
                   <span className="hints-title">
-                    💡 Hints ({Object.keys(hints).length}/3)
+                    💡 AI Hints ({Object.keys(hints).filter(k => hints[k]?.hint).length}/3)
                   </span>
                   <span className="expand-icon">
                     {hintsExpanded ? '▼' : '▶'}
                   </span>
                 </button>
-                
+
                 {hintsExpanded && (
                   <div className="hints-list">
-                    {[1, 2, 3].map(level => (
-                      <div key={level} className="hint-item">
-                        {hints[level] ? (
-                          <div className="hint-content">
-                            <div className="hint-label">
-                              Level {level} - {getHintTitle(level)}
-                            </div>
-                            <div className="hint-text">
-                              {hints[level].hint_type === 'code' ? (
-                                <pre className="hint-code">{hints[level].content}</pre>
-                              ) : hints[level].hint_type === 'video' ? (
-                                <>
-                                  <p>{hints[level].content}</p>
-                                  {hints[level].video_link && (
-                                    <a 
-                                      href={hints[level].video_link} 
-                                      target="_blank" 
-                                      rel="noopener noreferrer"
-                                      className="hint-video-link"
-                                    >
-                                      🎥 Watch Video Tutorial
-                                    </a>
-                                  )}
-                                </>
-                              ) : (
-                                <p>{hints[level].content}</p>
+                    {[1, 2, 3].map(level => {
+                      const h = hints[level]
+                      const prevUnlocked = level === 1 || hints[level - 1]?.hint
+                      return (
+                        <div key={level} className="hint-item">
+                          {h?.hint ? (
+                            <div className="hint-content">
+                              <div className="hint-label">
+                                {getHintIcon(level)} Level {level} — {getHintTitle(level)}
+                              </div>
+                              <div className="hint-text markdown-content">
+                                <ReactMarkdown
+                                  remarkPlugins={[remarkGfm]}
+                                  rehypePlugins={[rehypeHighlight]}
+                                >
+                                  {h.hint}
+                                </ReactMarkdown>
+                              </div>
+                              {h.ragSources && h.ragSources.length > 0 && (
+                                <div className="rag-sources">
+                                  <span className="rag-sources-label">Referenced:</span>
+                                  {h.ragSources.map((src, i) => (
+                                    <span key={i} className="rag-source-badge">📚 {src.name}</span>
+                                  ))}
+                                </div>
                               )}
                             </div>
-                          </div>
-                        ) : (
-                          <button
-                            className="unlock-hint-btn"
-                            onClick={() => requestHint(level)}
-                            disabled={level > 1 && !hints[level - 1]}
-                          >
-                            <span>{getHintIcon(level)}</span>
-                            <span>Unlock {getHintTitle(level)}</span>
-                          </button>
-                        )}
-                      </div>
-                    ))}
+                          ) : h?.loading ? (
+                            <div className="hint-loading">
+                              <span>🤖 AI is thinking...</span>
+                            </div>
+                          ) : h?.error ? (
+                            <div className="hint-error">
+                              <span>{h.error}</span>
+                              <button className="unlock-hint-btn" onClick={() => requestAIHint(level)}>
+                                Retry
+                              </button>
+                            </div>
+                          ) : (
+                            <button
+                              className="unlock-hint-btn"
+                              onClick={() => requestAIHint(level)}
+                              disabled={!prevUnlocked}
+                              title={!prevUnlocked ? 'Unlock previous hint first' : ''}
+                            >
+                              <span>{getHintIcon(level)}</span>
+                              <span>{getHintTitle(level)}</span>
+                              <span className="hint-desc">{getHintDesc(level)}</span>
+                            </button>
+                          )}
+                        </div>
+                      )
+                    })}
                   </div>
                 )}
               </div>
@@ -601,13 +725,19 @@ const CodeCheckPage = () => {
           >
             📋 Test Cases
           </button>
-          <button 
+          <button
             className={`console-tab ${activeTab === 'result' ? 'active' : ''}`}
             onClick={() => setActiveTab('result')}
           >
             📊 Results
           </button>
-          
+          <button
+            className={`console-tab ${activeTab === 'submissions' ? 'active' : ''}`}
+            onClick={() => { setActiveTab('submissions'); loadRecentSubmissions() }}
+          >
+            📜 My Submissions {submissions.length > 0 ? `(${submissions.length})` : ''}
+          </button>
+
           <div className="console-spacer"></div>
           
           {activeTab === 'result' && (testResults || result) && (
@@ -851,6 +981,51 @@ const CodeCheckPage = () => {
                 )}
               </div>
             )}
+
+            {/* ==================== Submissions Tab ==================== */}
+            {activeTab === 'submissions' && (
+              <div className="submissions-panel">
+                {loadingSubmissions ? (
+                  <div className="empty-state"><p>Loading submissions...</p></div>
+                ) : submissions.length === 0 ? (
+                  <div className="empty-state">
+                    <p>No submissions yet. Submit your code to track progress!</p>
+                  </div>
+                ) : (
+                  <div className="submissions-list">
+                    {submissions.map((sub, idx) => {
+                      const passed = sub.passed
+                      const prob = problems.find(p => p.id === sub.question_id)
+                      return (
+                        <div
+                          key={sub.id || idx}
+                          className={`submission-item ${passed ? 'passed' : 'failed'}`}
+                          onClick={() => sub.question_id && selectProblem(sub.question_id)}
+                          style={{ cursor: 'pointer' }}
+                        >
+                          <div className="submission-header">
+                            <span className={`submission-status ${passed ? 'accepted' : 'wrong'}`}>
+                              {passed ? '✅ Accepted' : '❌ Wrong Answer'}
+                            </span>
+                            <span className="submission-lang">{sub.language}</span>
+                            <span className="submission-time">
+                              {sub.created_at
+                                ? new Date(sub.created_at).toLocaleDateString()
+                                : ''}
+                            </span>
+                          </div>
+                          {prob && (
+                            <div className="submission-problem">
+                              #{prob.leetcode_id} {prob.title}
+                            </div>
+                          )}
+                        </div>
+                      )
+                    })}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         )}
       </div>
@@ -919,12 +1094,12 @@ const CodeCheckPage = () => {
                         code: ({node, inline, className, children, ...props}) => {
                           const match = /language-(\w+)/.exec(className || '')
                           const codeContent = String(children).replace(/\n$/, '')
-                          
+
                           return !inline && match ? (
                             <div className="code-block-container">
                               <div className="code-block-header">
                                 <span className="code-language">{match[1]}</span>
-                                <button 
+                                <button
                                   className="copy-code-btn"
                                   onClick={() => copyToClipboard(codeContent)}
                                   title="Copy code"
@@ -946,6 +1121,17 @@ const CodeCheckPage = () => {
                     >
                       {msg.content}
                     </ReactMarkdown>
+                    {/* RAG D: show source badges */}
+                    {msg.role === 'assistant' && msg.ragSources && msg.ragSources.length > 0 && (
+                      <div className="rag-sources">
+                        <span className="rag-sources-label">Referenced:</span>
+                        {msg.ragSources.map((src, i) => (
+                          <span key={i} className="rag-source-badge">
+                            📚 {src.name}
+                          </span>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 </div>
               ))

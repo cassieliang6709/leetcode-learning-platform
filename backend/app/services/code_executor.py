@@ -43,12 +43,13 @@ class PistonExecutor:
     )
     PISTON_API_KEY: str = os.getenv("PISTON_API_KEY", "")
     
-    # Language runtime mappings
+    # Language runtime mappings (Piston runtime names)
+    # Self-hosted: js=javascript, cpp=c++, c=c
     LANGUAGE_MAP: Dict[str, str] = {
         "python": "python",
         "javascript": "javascript",
         "java": "java",
-        "cpp": "cpp",
+        "cpp": "c++",
         "c": "c",
         "go": "go",
         "rust": "rust",
@@ -126,8 +127,8 @@ class PistonExecutor:
             ],
             "stdin": stdin,
             "args": args or [],
-            "compile_timeout": 10000,           # 10 seconds
-            "run_timeout": 5000,                # 5 seconds
+            "compile_timeout": 3000,            # 3 seconds (self-hosted Piston limit)
+            "run_timeout": 3000,                # 3 seconds (self-hosted Piston limit)
             "compile_memory_limit": 268435456,  # 256MB
             "run_memory_limit": 134217728       # 128MB
         }
@@ -366,7 +367,7 @@ class PistonExecutor:
             "php": "main.php",
             "ruby": "main.rb",
             "swift": "main.swift",
-            "kotlin": "main.kt"
+            "kotlin": "Main.kt"
         }
         return extensions.get(language.lower(), "main.txt")
     

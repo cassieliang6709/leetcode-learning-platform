@@ -327,6 +327,92 @@ Be concise and encouraging. Use markdown formatting."""
             }
         return {"success": False, "error": result["error"]}
 
+    async def get_dynamic_hint(
+        self,
+        code: str,
+        language: str,
+        problem_description: str,
+        hint_level: int,
+        test_results: Optional[List[Dict[str, Any]]] = None,
+        rag_context: str = ""
+    ) -> Dict[str, Any]:
+        """
+        Generate a dynamic, AI-powered hint for a coding problem.
+
+        Args:
+            code: User's current code.
+            language: Programming language.
+            problem_description: Problem description text.
+            hint_level: 1=Socratic question, 2=Direction hint, 3=Pseudocode.
+            test_results: Optional list of test results (for context).
+            rag_context: Optional RAG course material context.
+
+        Returns:
+            Dictionary with success, hint, or error.
+        """
+        if not isinstance(hint_level, int) or hint_level not in (1, 2, 3):
+            raise ValueError("hint_level must be 1, 2, or 3")
+
+        test_context = ""
+        if test_results:
+            failed = [t for t in test_results if not t.get("passed", False)]
+            if failed:
+                lines = [f"- Input: {t['input']} | Expected: {t['expected']} | Got: {t.get('actual','')}"
+                         for t in failed[:2]]
+                test_context = "**Failing test cases:**\n" + "\n".join(lines)
+
+        rag_section = f"\n\n**Relevant course material:**\n{rag_context}" if rag_context else ""
+
+        if hint_level == 1:
+            level_instruction = (
+                "Ask the student ONE short Socratic question to guide their thinking. "
+                "Do NOT name the algorithm or give any solution. "
+                "The question should make them realize what they're missing. "
+                "Max 2 sentences."
+            )
+        elif hint_level == 2:
+            level_instruction = (
+                "Tell the student: (1) the algorithm/pattern name to use, "
+                "(2) the high-level approach in 2-3 bullet points. "
+                "Do NOT write any code. Keep it under 100 words."
+            )
+        else:
+            level_instruction = (
+                "Write pseudocode for the solution. "
+                "Use TODO comments to mark the key steps the student needs to fill in. "
+                "Include a brief complexity note at the end."
+            )
+
+        prompt = f"""You are an expert coding tutor giving a Level {hint_level} hint.
+
+**Problem:**
+{problem_description}
+
+**Student's current code ({language}):**
+```{language}
+{code}
+```
+{test_context}{rag_section}
+
+**Your task:** {level_instruction}"""
+
+        system_prompt = (
+            "You are a concise and Socratic programming tutor. "
+            "Never give away full solutions. Guide students to discover answers themselves. "
+            "Use markdown formatting."
+            + ("\n\nReference the course material above when relevant." if rag_context else "")
+        )
+
+        messages = [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": prompt}
+        ]
+
+        result = await self._make_request(messages, temperature=0.7, max_tokens=600)
+        if result["success"]:
+            return {"success": True, "hint": result["content"]}
+        return {"success": False, "error": result["error"]}
+
     async def get_optimization_suggestions(
         self,
         code: str,

@@ -1,527 +1,290 @@
 <div align="center">
 
-# 🎯 AlgoMentor
+# AlgoMentor
 
-### AI-Powered Algorithm Learning System with Real-Time Code Execution
+**AI-Powered Coding Interview Prep Platform**
 
-[![Python 3.12+](https://img.shields.io/badge/python-3.12+-blue.svg)](https://www.python.org/downloads/)
-[![React 18.2](https://img.shields.io/badge/react-18.2-61dafb.svg)](https://reactjs.org/)
-[![FastAPI](https://img.shields.io/badge/fastapi-0.115-009688.svg)](https://fastapi.tiangolo.com/)
-[![PostgreSQL](https://img.shields.io/badge/postgresql-14+-336791.svg)](https://www.postgresql.org/)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.111-009688?logo=fastapi)](https://fastapi.tiangolo.com/)
+[![React](https://img.shields.io/badge/React-18-61DAFB?logo=react)](https://react.dev/)
+[![PostgreSQL](https://img.shields.io/badge/PostgreSQL+pgvector-15-336791?logo=postgresql)](https://github.com/pgvector/pgvector)
+[![Gemini](https://img.shields.io/badge/Gemini-2.5_Flash-4285F4?logo=google)](https://ai.google.dev/)
+[![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
-[Features](#-features) • [Demo](#-demo) • [Quick Start](#-quick-start) • [Tech Stack](#-tech-stack) • [Documentation](#-documentation)
+[Features](#features) · [Architecture](#architecture) · [Quick Start](#quick-start) · [API](#api-reference) · [Deploy](#deployment)
 
 </div>
 
 ---
 
-## 📖 Overview
+AlgoMentor is a full-stack LeetCode-style practice platform with a **RAG pipeline** that retrieves relevant algorithm articles from pgvector and injects them into Gemini 2.5 Flash — so every AI hint, chat response, and suggestion is grounded in the actual course curriculum, not hallucinated generics.
 
-A comprehensive learning platform that combines **LeetCode Hot 100** problems with AI-powered assistance, real-time code execution, and intelligent feedback system. Designed to help developers master data structures and algorithms through guided practice and personalized learning paths.
+**89 LeetCode problems · 13 algorithm topics · Dynamic AI hints · Isolated code execution · Semantic search**
 
-### 🎥 Demo
+---
 
-> **Live Platform**: Experience the full-featured learning environment with:
-> - 🚀 Real-time code execution across multiple languages
-> - 🤖 AI-powered code review and optimization suggestions
-> - 💡 Multi-level progressive hint system
-> - 📊 Visual learning roadmap with 9 core topics
+## Features
 
-## ✨ Features
+### 🧭 Structured Learning Roadmap
+13 algorithm topics with comprehensive articles: pattern recognition checklists, Python templates (2–5 per topic), complexity tables, common pitfalls, and practice problem lists. Topics: Array/Hash, Two Pointers, Sliding Window, Binary Search, Linked List, Stack, Trees, DP, Graphs, Greedy, Backtracking, Heap, Bit Manipulation.
 
-### 🎯 Core Learning Experience
+### 💻 Code Practice (89 LeetCode Hot 100)
+- **Monaco Editor** (VS Code engine) — Python, JavaScript, Java, C++
+- Language-specific starter code with stdin/stdout scaffolding for Piston
+- **Run Code** (test feedback) and **Submit** (full evaluation + AI analysis)
+- **Isolated execution**: Docker sandbox, 3s timeout, 128MB memory limit, no network access
 
-| Feature | Description |
-|---------|-------------|
-| **LeetCode Hot 100** | Curated collection of the most popular algorithm problems |
-| **Real-Time Execution** | Run and test code instantly with Piston API integration |
-| **Multi-Language Support** | Python, JavaScript, Java, C++ code execution |
-| **Smart Test Cases** | Comprehensive test suites with detailed output |
+### 🤖 RAG-Augmented AI Tutor
+Every AI response retrieves relevant article chunks from pgvector before calling the LLM:
 
-### 🤖 AI-Powered Assistance
+- **Chat**: multi-turn conversation about your code, grounded in course material
+- **Failure analysis**: auto-triggered on test fail — identifies the specific bug
+- **Optimization**: auto-triggered on all-pass — suggests complexity improvements
+- **Source badges**: shows which article the AI referenced (📚 Sliding Window)
 
-- **Failure Analysis**: Automatic debugging suggestions when tests fail
-- **Optimization Advice**: Get performance improvements for passing solutions
-- **Interactive AI Chat**: Ask questions about problems and get instant help
-- **Code Review**: Intelligent feedback on code quality and best practices
+### 💡 Dynamic AI Hints (3 levels)
+Hints are generated from your **current code** + **failing test cases** — not static text:
 
-### 💡 Progressive Hint System
+| Level | Style | What you get |
+|-------|-------|-------------|
+| 🤔 1 — Socratic | Question | ONE guiding question, no algorithm name, no spoilers |
+| 🧭 2 — Direction | Approach | Pattern name + bullet-point strategy, zero code |
+| 📝 3 — Pseudocode | Scaffold | Full pseudocode with `TODO` stubs + complexity note |
 
-Three-tier learning support designed to preserve your problem-solving skills:
+Levels are gated — unlock 1 before 2, unlock 2 before 3.
 
-1. **Level 1 - Strategy Hint**: High-level approach and algorithm selection
-2. **Level 2 - Code Hint**: Implementation guidance with pseudocode
-3. **Level 3 - Video Tutorial**: Visual explanation with YouTube integration
+### 🔍 Semantic Problem Search
+"sliding window substring" → LeetCode 3, 76, 424. In-memory cosine similarity over all 89 problem embeddings. Debounced 400ms with live results in the drawer.
 
-### 📊 Learning Path & Progress
+### 📊 Personalized Context (RAG B)
+AI automatically injects your last 3 submission outcomes per problem: *"You passed 2/3 test cases last time — edge case handling is likely the issue."*
 
-- **Knowledge Assessment**: Initial quiz to evaluate your skill level
-- **AI-Generated Study Plan**: Personalized learning recommendations
-- **Visual Roadmap**: Navigate through 9 algorithm topics with progress tracking
-- **Daily Challenges**: Curated problems to maintain consistency
+### 📜 Submission History
+All submissions with status, language, timestamp. Click any past entry to reload the problem.
 
-### 🎨 Modern UI/UX
+---
 
-- **NeetCode-Inspired Interface**: Clean, professional code editor layout
-- **Monaco Editor**: VSCode-quality editing experience
-- **Split-Pane Design**: Problem description, code editor, and console
-- **Expandable Results**: Maximize test results for detailed analysis
-- **Dark/Light Theme**: Comfortable viewing in any environment
-
-## 🏗️ Tech Stack
-
-### Backend Architecture
+## Architecture
 
 ```
-FastAPI (Python 3.12+)
-├── SQLAlchemy ORM (Async)
-├── PostgreSQL Database
-├── Piston API Integration (Code Execution)
-├── SiliconFlow AI (Code Analysis)
-└── asyncpg (High-Performance Driver)
+┌─────────────────────────────────────────────────────┐
+│              React SPA (Vite + Monaco)               │
+│  Roadmap │ Learning │ CodeCheck │ Quiz │ Auth        │
+└──────────────────────┬──────────────────────────────┘
+                       │ HTTPS REST
+┌──────────────────────▼──────────────────────────────┐
+│           FastAPI (async Python 3.11)                │
+│  /auth  /knowledge  /quiz  /code  /execution         │
+│  /ai (chat · hint · suggest)  /rag (index · search)  │
+│                                                      │
+│  ┌──────────────┐  ┌─────────────────────────────┐  │
+│  │ code_executor│  │ gemini_ai.py                 │  │
+│  │ Piston HTTP  │  │ chat_about_code  (RAG+B+D)   │  │
+│  └──────┬───────┘  │ get_dynamic_hint (NEW)        │  │
+│         │          │ get_failure_suggestion         │  │
+│  ┌──────┴───────┐  └──────────────┬───────────────┘  │
+│  │  SlowAPI     │  ┌──────────────▼───────────────┐  │
+│  │  Rate limit  │  │ rag_service.py                │  │
+│  │  Redis/mem   │  │ chunk → embed → pgvector      │  │
+│  └──────────────┘  └──────────────────────────────┘  │
+└──────────────────────────────────────────────────────┘
+            │                         │
+  ┌─────────▼──────┐       ┌──────────▼──────────┐
+  │  Piston Docker │       │  PostgreSQL + pgvec  │
+  │  3s timeout    │       │  users               │
+  │  128MB mem     │       │  knowledge_points    │
+  │  net isolated  │       │  knowledge_embeddings│
+  └────────────────┘       │  quiz_questions      │
+                           │  code_submissions    │
+                           └─────────────────────┘
 ```
 
-**Key Technologies:**
-- **FastAPI**: Modern async web framework with automatic API docs
-- **SQLAlchemy 2.0**: Advanced ORM with async support
-- **PostgreSQL**: Robust relational database
-- **Pydantic**: Data validation and settings management
-- **CORS Middleware**: Secure cross-origin requests
-
-### Frontend Stack
-
+**RAG Pipeline:**
 ```
-React 18 + Vite
-├── React Router v6 (Navigation)
-├── Monaco Editor (Code Editing)
-├── Axios (API Client)
-├── React Markdown (Rich Content)
-└── Context API (State Management)
+13 articles → 500-char chunks (50-char overlap)
+           → all-MiniLM-L6-v2 (384-dim, local)
+           → pgvector cosine similarity (threshold 0.4)
+           → top-3 chunks → Gemini 2.5 Flash system prompt
 ```
 
-**UI Components:**
-- **Monaco Editor**: Professional code editing with syntax highlighting
-- **React Markdown**: Render formatted problem descriptions and AI responses
-- **Custom Components**: Reusable UI elements for consistent design
+---
 
-### AI & External Services
-
-- **SiliconFlow AI**: Natural language processing for code analysis
-- **Piston API**: Secure sandboxed code execution
-- **YouTube Integration**: Embedded video tutorials
-
-## 🚀 Quick Start
+## Quick Start
 
 ### Prerequisites
+- Python 3.11+ · Node.js 18+ · Docker + Docker Compose
+- [Google Gemini API key](https://ai.google.dev/) (free tier)
 
-Ensure you have the following installed:
-
-- **Python 3.12+** ([Download](https://www.python.org/downloads/))
-- **Node.js 18+** ([Download](https://nodejs.org/))
-- **PostgreSQL 14+** ([Download](https://www.postgresql.org/download/))
-
-### Installation
-
-#### 1. Clone the Repository
+### Option A — Docker (recommended)
 
 ```bash
 git clone https://github.com/cassieliang6709/leetcode-learning-platform.git
 cd leetcode-learning-platform
+
+cp backend/.env.example backend/.env
+# Edit backend/.env → set GEMINI_API_KEY and SECRET_KEY
+
+docker-compose up -d
+
+# Install Piston language runtimes (one-time, ~2 min)
+bash scripts/setup_piston.sh
+
+# Seed database
+docker-compose exec backend python scripts/init_db.py
+docker-compose exec backend python scripts/update_articles_v2.py
+
+# Build RAG vector index
+curl -X POST http://localhost:8000/api/rag/index/all
 ```
 
-#### 2. Database Setup
+- Frontend: http://localhost:5173
+- API docs: http://localhost:8000/docs
 
-```bash
-# Create PostgreSQL database
-psql -d postgres -c "CREATE DATABASE leetcode_learning;"
-```
-
-#### 3. Backend Setup
-
-```bash
-cd backend
-
-# Create virtual environment
-python3.12 -m venv venv
-
-# Activate virtual environment
-source venv/bin/activate  # On Windows: venv\Scripts\activate
-
-# Install dependencies
-pip install -r requirements.txt
-
-# Configure environment variables
-cp env.template .env
-# Edit .env and add your DATABASE_URL and SILICONFLOW_API_KEY
-```
-
-#### 4. Initialize Database
-
-```bash
-cd ..
-python scripts/init_db.py
-python scripts/init_leetcode_hot100_complete.py
-```
-
-#### 5. Frontend Setup
-
-```bash
-cd frontend
-npm install
-```
-
-### Running the Application
-
-#### Development Mode
-
-**Terminal 1 - Backend Server:**
-```bash
-cd backend
-source venv/bin/activate
-uvicorn main:app --reload --port 8000
-```
-
-**Terminal 2 - Frontend Server:**
-```bash
-cd frontend
-npm run dev
-```
-
-#### Using Scripts (Recommended)
-
-```bash
-# Start both frontend and backend
-./scripts/start_all.sh
-
-# Stop all services
-./scripts/stop_all.sh
-```
-
-### Access Points
-
-| Service | URL | Description |
-|---------|-----|-------------|
-| **Frontend** | http://localhost:5173 | Main application interface |
-| **Backend API** | http://localhost:8000 | REST API endpoints |
-| **API Docs** | http://localhost:8000/docs | Interactive API documentation |
-| **Health Check** | http://localhost:8000/health | System status endpoint |
-
-## 📁 Project Structure
-
-```
-leetcode-learning-platform/
-│
-├── backend/                      # FastAPI Backend
-│   ├── app/
-│   │   ├── api/
-│   │   │   └── routes/          # API Endpoints
-│   │   │       ├── auth.py      # Authentication
-│   │   │       ├── code_check.py        # Code review
-│   │   │       ├── code_execution.py    # Run code
-│   │   │       ├── ai_assistant.py      # AI features
-│   │   │       ├── quiz.py              # Quizzes
-│   │   │       └── knowledge.py         # Learning paths
-│   │   ├── services/            # Business Logic
-│   │   │   ├── siliconflow_ai.py       # AI integration
-│   │   │   ├── code_executor.py        # Piston API
-│   │   │   └── auth_service.py         # Authentication
-│   │   ├── database.py          # DB configuration
-│   │   ├── models.py            # SQLAlchemy models
-│   │   └── schemas.py           # Pydantic schemas
-│   ├── main.py                  # Application entry
-│   ├── requirements.txt         # Python dependencies
-│   └── .env                     # Environment variables
-│
-├── frontend/                    # React Frontend
-│   ├── src/
-│   │   ├── pages/              # Page Components
-│   │   │   ├── HomePage.jsx           # Landing & Assessment
-│   │   │   ├── RoadmapPage.jsx        # Learning roadmap
-│   │   │   ├── LearningPage.jsx       # Daily practice
-│   │   │   ├── QuizPage.jsx           # Quiz interface
-│   │   │   ├── CodeCheckPage.jsx      # Code editor
-│   │   │   ├── LoginPage.jsx          # Authentication
-│   │   │   └── RegisterPage.jsx       # User registration
-│   │   ├── contexts/           # State Management
-│   │   │   ├── AuthContext.jsx        # User auth state
-│   │   │   └── ThemeContext.jsx       # UI theme
-│   │   ├── services/
-│   │   │   └── api.js          # API client
-│   │   ├── styles/             # Global styles
-│   │   │   ├── skeleton.css          # Loading states
-│   │   │   └── NeetCodeStyle.css     # Code editor styles
-│   │   ├── App.jsx             # Root component
-│   │   └── main.jsx            # Application entry
-│   ├── package.json            # Node dependencies
-│   └── vite.config.js          # Vite configuration
-│
-└── scripts/                     # Utility Scripts
-    ├── init_db.py              # Initialize database
-    ├── init_leetcode_hot100_complete.py  # Load problems
-    ├── start_all.sh            # Start services
-    └── stop_all.sh             # Stop services
-```
-
-## 🎮 User Guide
-
-### Getting Started
-
-1. **Register Account** → Create your learning profile
-2. **Take Assessment** → Complete the initial knowledge quiz
-3. **Get Study Plan** → Receive AI-generated recommendations
-4. **Follow Roadmap** → Navigate through 9 algorithm topics
-
-### Using the Code Editor
-
-#### Problem Solving Workflow
-
-```
-1. Read Problem → 2. Request Hints → 3. Write Code → 4. Run Tests → 5. Get Feedback
-```
-
-#### Available Features
-
-- **Monaco Editor**: Professional code editing with IntelliSense
-- **Language Selection**: Switch between Python, JavaScript, Java, C++
-- **Split View**: Adjustable panes for description and code
-- **Console Output**: Real-time test results and error messages
-- **Maximize Results**: Expand test output for detailed analysis
-
-#### Hint System Usage
-
-```javascript
-// Request hints progressively as needed
-Level 1 (Strategy) → Level 2 (Code) → Level 3 (Video)
-```
-
-**Best Practice**: Try solving independently before requesting hints to maximize learning.
-
-### AI Assistant Features
-
-#### 1. Automatic Failure Analysis
-When tests fail, AI automatically analyzes your code and provides:
-- Error explanation
-- Debugging suggestions
-- Edge cases you missed
-- Corrected implementation examples
-
-#### 2. Optimization Suggestions
-When all tests pass, AI reviews your code for:
-- Time complexity improvements
-- Space complexity optimization
-- Code quality best practices
-- Alternative approaches
-
-#### 3. Interactive Chat
-Click the AI button to:
-- Ask about problem concepts
-- Request implementation help
-- Clarify confusing requirements
-- Get debugging assistance
-
-## 📊 Database Schema
-
-### Core Tables
-
-| Table | Description | Key Fields |
-|-------|-------------|------------|
-| `users` | User accounts | email, hashed_password, created_at |
-| `knowledge_points` | Algorithm topics (9 categories) | name, description, difficulty |
-| `quiz_questions` | LeetCode Hot 100 problems | title, description, difficulty, test_cases |
-| `code_submissions` | Code history & feedback | user_id, code, language, ai_feedback |
-| `quiz_attempts` | Problem-solving records | user_id, question_id, is_correct |
-| `knowledge_tests` | Assessment results | user_id, score, weak_points |
-| `learning_plans` | Personalized study plans | user_id, recommended_path |
-
-### Relationships
-
-```
-users ─┬─→ code_submissions
-       ├─→ quiz_attempts
-       ├─→ knowledge_tests
-       └─→ learning_plans
-
-knowledge_points → quiz_questions → quiz_attempts
-```
-
-## 🔧 Configuration
-
-### Environment Variables
-
-Create `backend/.env`:
-
-```env
-# Database
-DATABASE_URL=postgresql+asyncpg://username:password@localhost:5432/leetcode_learning
-
-# AI Service (SiliconFlow)
-SILICONFLOW_API_KEY=your_api_key_here
-
-# Security (Optional)
-SECRET_KEY=your-secret-key-here
-ALGORITHM=HS256
-ACCESS_TOKEN_EXPIRE_MINUTES=30
-```
-
-### Frontend Configuration
-
-Create `frontend/.env` (optional):
-
-```env
-VITE_API_URL=http://localhost:8000/api
-```
-
-## 🚀 Deployment
-
-### Deploy to Production
-
-The platform can be deployed to:
-
-- **Backend**: Render, Railway, or any Python hosting service
-- **Frontend**: Vercel, Netlify, or any static hosting
-- **Database**: Railway, Supabase, or managed PostgreSQL
-
-See [DEPLOYMENT_GUIDE.md](DEPLOYMENT_GUIDE.md) for detailed instructions.
-
-### Production Checklist
-
-- [ ] Set production environment variables
-- [ ] Configure CORS for your domain
-- [ ] Use production database credentials
-- [ ] Enable HTTPS
-- [ ] Set up monitoring and logging
-
-## 🐛 Troubleshooting
-
-### Common Issues
-
-#### Python Version Compatibility
-
-```bash
-# If using Python 3.13, switch to 3.12
-brew install python@3.12
-python3.12 -m venv venv
-```
-
-#### Port Already in Use
-
-```bash
-# Kill process on port 8000 (backend)
-lsof -ti:8000 | xargs kill -9
-
-# Kill process on port 5173 (frontend)
-lsof -ti:5173 | xargs kill -9
-```
-
-#### Database Connection Failed
-
-```bash
-# Check PostgreSQL status
-brew services list
-
-# Start PostgreSQL service
-brew services start postgresql@14
-
-# Verify connection
-psql -d leetcode_learning
-```
-
-#### Missing Dependencies
+### Option B — Local Dev
 
 ```bash
 # Backend
 cd backend
-source venv/bin/activate
-pip install -r requirements.txt --upgrade
+python -m venv venv && source venv/bin/activate
+pip install -r requirements.txt
+cp .env.example .env
+uvicorn main:app --reload --port 8000
 
-# Frontend
+# Frontend (new terminal)
 cd frontend
-rm -rf node_modules package-lock.json
 npm install
+echo "VITE_API_URL=http://localhost:8000/api" > .env.local
+npm run dev
 ```
 
-### Getting Help
+> **Code execution without Docker:** Get a free Piston API key from [discord.gg/engineerman](https://discord.gg/engineerman) (`#api-key` channel) and set `PISTON_API_KEY=your-key` in `backend/.env`.
 
-- 📖 Check [START_HERE.md](START_HERE.md) for setup guide
-- 🔧 See [TROUBLESHOOTING.md](TROUBLESHOOTING.md) for detailed fixes
-- 💬 Open an issue on GitHub
-- 📧 Contact the maintainers
+---
 
-## 🤝 Contributing
+## Environment Variables
 
-We welcome contributions! Here's how you can help:
+```env
+# backend/.env
+DATABASE_URL=postgresql+asyncpg://user:pass@localhost:5432/algomentor
+GEMINI_API_KEY=your-gemini-api-key
+SECRET_KEY=your-random-32-char-secret      # openssl rand -hex 32
+PISTON_URL=http://localhost:2000/api/v2    # self-hosted Docker; omit for public API
+PISTON_API_KEY=                            # needed only for public emkc.org API
+REDIS_URL=redis://localhost:6379           # optional; falls back to in-memory
+SQL_ECHO=false
+```
 
-### Contribution Process
+---
 
-1. **Fork** the repository
-2. **Create** a feature branch (`git checkout -b feature/AmazingFeature`)
-3. **Commit** your changes (`git commit -m 'Add AmazingFeature'`)
-4. **Push** to the branch (`git push origin feature/AmazingFeature`)
-5. **Open** a Pull Request
+## Project Structure
 
-### Development Guidelines
+```
+algo-mentor/
+├── backend/
+│   ├── main.py                       # App entry, CORS, routes, rate limiter
+│   ├── app/
+│   │   ├── models.py                 # SQLAlchemy: User, QuizQuestion, CodeSubmission, KnowledgeEmbedding
+│   │   ├── database.py               # Async SQLAlchemy session factory
+│   │   ├── api/routes/
+│   │   │   ├── auth.py
+│   │   │   ├── knowledge.py          # Roadmap articles + learning plan
+│   │   │   ├── quiz.py               # MCQ quizzes with hints
+│   │   │   ├── code_check.py         # Problem list (deduplicated), AI analysis
+│   │   │   ├── code_execution.py     # Piston submit, starter code, submission history
+│   │   │   ├── ai_assistant.py       # Chat (RAG+B+D), dynamic hints, failure/opt suggest
+│   │   │   └── rag.py                # Index all, chunk search, semantic problem search
+│   │   └── services/
+│   │       ├── gemini_ai.py          # Gemini 2.5 Flash: chat, dynamic hints, analysis
+│   │       ├── rag_service.py        # Chunking, embedding, pgvector retrieval
+│   │       ├── code_executor.py      # Piston API wrapper (PISTON_URL env var)
+│   │       └── auth_service.py       # JWT creation/validation + bcrypt
+│   └── scripts/
+│       ├── init_db.py                # Create tables + seed 89 problems
+│       └── update_articles_v2.py     # Clean duplicate KPs + write 13 articles
+├── frontend/src/
+│   ├── pages/
+│   │   ├── CodeCheckPage.jsx         # Main IDE: editor, dynamic hints, AI chat, submissions
+│   │   ├── LearningPage.jsx          # Article reader with markdown
+│   │   ├── RoadmapPage.jsx           # Topic grid with dynamic category filter
+│   │   └── QuizPage.jsx
+│   └── services/api.js               # All API calls (Axios + JWT interceptor)
+├── docker-compose.yml                # postgres/pgvector + redis + piston + backend
+├── backend/Dockerfile                # Pre-downloads sentence-transformers model
+└── scripts/
+    ├── init_db.sql                   # CREATE EXTENSION vector (auto on postgres start)
+    └── setup_piston.sh               # Install py/js/java/cpp runtimes into Piston
+```
 
-- Follow PEP 8 for Python code
-- Use ESLint configuration for JavaScript
-- Write descriptive commit messages
-- Add tests for new features
-- Update documentation as needed
+---
 
-### Areas for Contribution
+## API Reference
 
-- 🐛 Bug fixes and error handling
-- ✨ New features and enhancements
-- 📝 Documentation improvements
-- 🎨 UI/UX enhancements
-- 🧪 Test coverage expansion
-- 🌐 Internationalization (i18n)
+| Method | Endpoint | Rate | Description |
+|--------|----------|------|-------------|
+| `POST` | `/api/auth/register` | — | Create account |
+| `POST` | `/api/auth/login` | — | Login → JWT |
+| `GET` | `/api/code/problems` | — | 89 problems (deduplicated by leetcode_id) |
+| `GET` | `/api/execution/question/{id}/starter-code` | — | Language starter code |
+| `POST` | `/api/execution/submit/{id}` | 10/min | Run code against test cases |
+| `GET` | `/api/execution/submissions/me/recent` | — | Last N submissions (JWT) |
+| `POST` | `/api/ai/hint` | 20/min | Dynamic 3-level AI hint (RAG-augmented) |
+| `POST` | `/api/ai/chat` | 20/min | Multi-turn AI chat (RAG + user history) |
+| `POST` | `/api/ai/suggestion/failure` | — | Auto failure analysis |
+| `POST` | `/api/ai/suggestion/optimization` | — | Complexity suggestions |
+| `GET` | `/api/rag/problems/search?q=...` | — | Semantic problem search |
+| `POST` | `/api/rag/index/all` | — | Rebuild pgvector index (admin) |
 
-## 📄 License
+Full interactive docs: `http://localhost:8000/docs`
 
-This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) file for details.
+---
 
-## 👥 Authors & Acknowledgments
+## Deployment
 
-### Core Team
+**Recommended stack: Railway + Vercel + Supabase ($5/month)**
 
-- **Cassie Liang** - [@cassieliang6709](https://github.com/cassieliang6709) - Project Lead & Full-Stack Development
+```bash
+# 1. Supabase — create project, run in SQL Editor:
+CREATE EXTENSION IF NOT EXISTS vector;
 
-### Special Thanks
+# 2. Railway — deploy backend
+brew install railway
+cd backend && railway login && railway init && railway up
+# Set env vars in Railway Dashboard
 
-- **LeetCode** - For problem inspiration and learning resources
-- **NeetCode** - UI/UX design inspiration
-- **FastAPI Community** - Excellent framework and documentation
-- **React Community** - Amazing tools and ecosystem
-- **SiliconFlow** - AI-powered code analysis capabilities
-- **Piston API** - Secure code execution infrastructure
+# 3. Initialize DB
+DATABASE_URL="your-supabase-url" python scripts/init_db.py
+DATABASE_URL="your-supabase-url" python scripts/update_articles_v2.py
+curl -X POST https://your-app.railway.app/api/rag/index/all
 
-## 🌟 Star History
+# 4. Vercel — deploy frontend
+cd frontend && npx vercel deploy --prod
+# Set VITE_API_URL=https://your-app.railway.app/api
+```
 
-If you find this project helpful, please consider giving it a ⭐!
+See [`interview-prep/MASTER.md`](interview-prep/MASTER.md) for full deployment guide and interview Q&A.
 
-[![Star History Chart](https://api.star-history.com/svg?repos=cassieliang6709/leetcode-learning-platform&type=Date)](https://star-history.com/#cassieliang6709/leetcode-learning-platform&Date)
+---
 
-## 📞 Support & Community
+## Tech Stack
 
-### Get Support
+| Layer | Technology |
+|-------|-----------|
+| Frontend | React 18, Vite, Monaco Editor, React Markdown, Axios |
+| Backend | FastAPI, SQLAlchemy 2.0 async, Pydantic v2, python-jose, bcrypt |
+| Database | PostgreSQL 15 + pgvector |
+| AI / LLM | Google Gemini 2.5 Flash |
+| Embeddings | sentence-transformers `all-MiniLM-L6-v2` (384-dim, local inference) |
+| Code Execution | Piston (Docker sandbox or public API) |
+| Rate Limiting | SlowAPI + Redis (in-memory fallback) |
+| Deployment | Railway · Vercel · Supabase |
 
-- 💬 [GitHub Issues](https://github.com/cassieliang6709/leetcode-learning-platform/issues) - Bug reports and feature requests
-- 📖 [Documentation](START_HERE.md) - Comprehensive setup guide
-- 🔧 [Troubleshooting](TROUBLESHOOTING.md) - Common problems and solutions
+---
 
-### Stay Updated
+## License
 
-- ⭐ Star this repository to follow updates
-- 👀 Watch for new releases and features
-- 🍴 Fork to create your own version
+MIT — see [LICENSE](LICENSE)
 
 ---
 
 <div align="center">
-
-**Made with ❤️ for algorithm learners worldwide**
-
-[Report Bug](https://github.com/cassieliang6709/leetcode-learning-platform/issues) • [Request Feature](https://github.com/cassieliang6709/leetcode-learning-platform/issues) • [Documentation](START_HERE.md)
-
+Built by <a href="https://github.com/cassieliang6709">Yue Liang</a>
 </div>

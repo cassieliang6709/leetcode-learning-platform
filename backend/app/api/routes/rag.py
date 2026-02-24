@@ -12,16 +12,19 @@ Endpoints:
 Author: Yue Liang
 """
 
-from typing import Dict, Any, Optional
+from typing import Dict, Any, List, Optional
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select
 
 from app.database import get_db
+from app.models import QuizQuestion
 from app.services.rag_service import (
     index_knowledge_point,
     index_all_knowledge_points,
-    search_relevant_chunks
+    search_relevant_chunks,
+    get_embedding_model
 )
 
 router = APIRouter()
@@ -121,3 +124,91 @@ async def semantic_search(
         "results": chunks,
         "count": len(chunks)
     }
+
+
+@router.get("/problems/search")
+async def semantic_search_problems(
+    q: str = Query(..., min_length=1, description="Search query"),
+    top_k: int = Query(8, ge=1, le=20, description="Number of results"),
+    db: AsyncSession = Depends(get_db)
+) -> Dict[str, Any]:
+    """
+    Semantic search over LeetCode problems using sentence embeddings.
+
+    Encodes the query and computes cosine similarity against all problem
+    titles and descriptions in-memory. Returns the most semantically
+    similar problems.
+
+    Args:
+        q: Natural language search query (e.g. "sliding window substring").
+        top_k: Number of results to return.
+        db: Database session.
+
+    Returns:
+        List of matching problems with similarity scores.
+    """
+    try:
+        import numpy as np
+
+        # Fetch all problems (deduplicated by leetcode_id)
+        result = await db.execute(
+            select(QuizQuestion)
+            .where(QuizQuestion.leetcode_id.isnot(None))
+            .order_by(QuizQuestion.leetcode_id, QuizQuestion.id)
+        )
+        all_problems = result.scalars().all()
+
+        # Dedup: prefer record with test_cases
+        seen: Dict[int, Any] = {}
+        for prob in all_problems:
+            lid = prob.leetcode_id
+            if lid not in seen:
+                seen[lid] = prob
+            else:
+                if not (seen[lid].test_cases and len(seen[lid].test_cases) > 0) and \
+                   prob.test_cases and len(prob.test_cases) > 0:
+                    seen[lid] = prob
+        problems = list(seen.values())
+
+        if not problems:
+            return {"query": q, "results": [], "count": 0}
+
+        # Encode query + all problem texts
+        model = get_embedding_model()
+        query_emb = model.encode([q])[0]
+        texts = [
+            f"#{p.leetcode_id} {p.title} {p.description or ''}"
+            for p in problems
+        ]
+        prob_embs = model.encode(texts, show_progress_bar=False)
+
+        # Cosine similarity
+        q_norm = np.linalg.norm(query_emb)
+        scores = []
+        for emb, prob in zip(prob_embs, problems):
+            sim = float(np.dot(query_emb, emb) / (q_norm * np.linalg.norm(emb) + 1e-9))
+            scores.append((sim, prob))
+
+        scores.sort(key=lambda x: -x[0])
+
+        return {
+            "query": q,
+            "results": [
+                {
+                    "id": prob.id,
+                    "leetcode_id": prob.leetcode_id,
+                    "title": prob.title,
+                    "difficulty": prob.difficulty,
+                    "score": round(score, 3),
+                    "has_hints": bool(prob.hints and len(prob.hints) > 0)
+                }
+                for score, prob in scores[:top_k]
+                if score > 0.25
+            ],
+            "count": len([s for s, _ in scores[:top_k] if s > 0.25])
+        }
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Semantic search failed: {str(e)}"
+        ) from e

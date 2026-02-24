@@ -279,6 +279,9 @@ async def get_problems(
     """
     Get LeetCode problems, optionally filtered by category or difficulty.
 
+    Deduplicates by leetcode_id, preferring the record that has test cases
+    and starter code populated.
+
     Args:
         category: Optional category filter (not currently implemented).
         difficulty: Optional difficulty filter ("easy", "medium", "hard").
@@ -292,7 +295,7 @@ async def get_problems(
     """
     try:
         query = select(QuizQuestion)
-        
+
         if difficulty:
             if difficulty not in ["easy", "medium", "hard"]:
                 raise HTTPException(
@@ -300,10 +303,29 @@ async def get_problems(
                     detail="Difficulty must be 'easy', 'medium', or 'hard'"
                 )
             query = query.where(QuizQuestion.difficulty == difficulty)
-        
-        result = await db.execute(query.order_by(QuizQuestion.leetcode_id))
-        problems = result.scalars().all()
-        
+
+        result = await db.execute(query.order_by(QuizQuestion.leetcode_id, QuizQuestion.id))
+        all_problems = result.scalars().all()
+
+        # Deduplicate by leetcode_id — prefer the record with non-empty test_cases
+        seen: Dict[int, Any] = {}
+        no_lc_id: List[Any] = []
+        for prob in all_problems:
+            lid = prob.leetcode_id
+            if lid is None:
+                no_lc_id.append(prob)
+                continue
+            if lid not in seen:
+                seen[lid] = prob
+            else:
+                current = seen[lid]
+                current_has_tc = bool(current.test_cases and len(current.test_cases) > 0)
+                this_has_tc = bool(prob.test_cases and len(prob.test_cases) > 0)
+                if not current_has_tc and this_has_tc:
+                    seen[lid] = prob
+
+        deduped = sorted(seen.values(), key=lambda p: p.leetcode_id or 0) + no_lc_id
+
         return {
             "problems": [
                 {
@@ -319,7 +341,7 @@ async def get_problems(
                     ),
                     "video_link": prob.video_link
                 }
-                for prob in problems
+                for prob in deduped
             ]
         }
     except HTTPException:
@@ -361,24 +383,45 @@ async def get_problem_detail(
             select(QuizQuestion).where(QuizQuestion.id == question_id)
         )
         problem = result.scalar_one_or_none()
-        
+
         if not problem:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Problem not found"
             )
-        
+
+        # If this record lacks test_cases or starter_code, find the best sibling
+        # with the same leetcode_id (duplicates from multiple init scripts)
+        missing_tc = not (problem.test_cases and len(problem.test_cases) > 0)
+        missing_sc = not problem.starter_code
+        if (missing_tc or missing_sc) and problem.leetcode_id:
+            siblings_result = await db.execute(
+                select(QuizQuestion)
+                .where(
+                    QuizQuestion.leetcode_id == problem.leetcode_id,
+                    QuizQuestion.id != problem.id
+                )
+                .order_by(QuizQuestion.id)
+            )
+            siblings = siblings_result.scalars().all()
+            for sib in siblings:
+                if missing_tc and sib.test_cases and len(sib.test_cases) > 0:
+                    problem = sib
+                    missing_tc = False
+                    missing_sc = not problem.starter_code
+                    break
+
         hints_available = []
         if problem.hints and isinstance(problem.hints, list):
             hints_available = [i + 1 for i in range(min(3, len(problem.hints)))]
-        
+
         return {
             "id": problem.id,
             "leetcode_id": problem.leetcode_id,
             "title": problem.title,
             "description": problem.description,
             "difficulty": problem.difficulty,
-            "test_cases": problem.test_cases,
+            "test_cases": problem.test_cases or [],
             "starter_code": problem.starter_code,
             "video_link": problem.video_link,
             "hints_available": hints_available

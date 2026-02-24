@@ -17,9 +17,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
 from app.database import get_db
-from app.models import QuizQuestion
+from app.models import QuizQuestion, KnowledgePoint, CodeSubmission, User
 from app.services.gemini_ai import get_ai_service
 from app.services.rag_service import search_relevant_chunks, build_rag_context
+from app.services.auth_service import get_current_user
 
 limiter = Limiter(key_func=get_remote_address)
 
@@ -71,6 +72,24 @@ class ChatRequest(BaseModel):
     language: str
     message: str
     chat_history: Optional[List[ChatMessage]] = None
+
+
+class HintRequest(BaseModel):
+    """
+    Request model for dynamic AI hint.
+
+    Attributes:
+        question_id: ID of the question.
+        code: User's current code.
+        language: Programming language.
+        hint_level: 1=Socratic, 2=Direction, 3=Pseudocode.
+        test_results: Optional list of test result dicts (to give context).
+    """
+    question_id: int
+    code: str
+    language: str
+    hint_level: int
+    test_results: Optional[List[Dict[str, Any]]] = None
 
 
 class OptimizationRequest(BaseModel):
@@ -171,6 +190,7 @@ async def get_failure_suggestion(
 async def chat_with_ai(
     body: ChatRequest,
     request: Request,
+    current_user: Optional[User] = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ) -> Dict[str, Any]:
     """
@@ -230,6 +250,47 @@ async def chat_with_ai(
         )
         rag_context = build_rag_context(rag_chunks)
 
+        # RAG D: fetch knowledge point names for source attribution
+        kp_names: Dict[int, str] = {}
+        if rag_chunks:
+            kp_ids = list({c["knowledge_point_id"] for c in rag_chunks})
+            kp_result = await db.execute(
+                select(KnowledgePoint).where(KnowledgePoint.id.in_(kp_ids))
+            )
+            for kp in kp_result.scalars().all():
+                kp_names[kp.id] = kp.name
+
+        # RAG B: personalize with user's recent submission history for this problem
+        user_history_context = ""
+        if current_user:
+            sub_result = await db.execute(
+                select(CodeSubmission)
+                .where(
+                    CodeSubmission.user_id == current_user.id,
+                    CodeSubmission.question_id == body.question_id
+                )
+                .order_by(CodeSubmission.created_at.desc())
+                .limit(3)
+            )
+            recent_subs = sub_result.scalars().all()
+            if recent_subs:
+                lines = ["**Your Recent Attempts on This Problem:**"]
+                for sub in recent_subs:
+                    feedback = sub.ai_feedback or {}
+                    summary = feedback.get("summary", {})
+                    passed = summary.get("passed", "?")
+                    total = summary.get("total", "?")
+                    lines.append(
+                        f"- {sub.language}, passed {passed}/{total} test cases"
+                        + (f" (most recent)" if sub == recent_subs[0] else "")
+                    )
+                user_history_context = "\n".join(lines)
+
+        # Combine RAG context with user history
+        full_context = rag_context
+        if user_history_context:
+            full_context = (user_history_context + "\n\n" + rag_context).strip()
+
         # Get AI service
         ai_service = get_ai_service()
 
@@ -240,7 +301,7 @@ async def chat_with_ai(
             language=body.language,
             problem_description=question.description or "",
             chat_history=chat_history,
-            rag_context=rag_context
+            rag_context=full_context
         )
 
         if not chat_result.get("success", False):
@@ -252,11 +313,17 @@ async def chat_with_ai(
                 )
             )
 
+        # RAG D: return source names for frontend display
+        rag_sources = [
+            {"id": c["knowledge_point_id"], "name": kp_names.get(c["knowledge_point_id"], "Course Material")}
+            for c in rag_chunks
+        ]
+
         return {
             "success": True,
             "response": chat_result.get("response", ""),
             "usage": chat_result.get("usage", {}),
-            "rag_sources": [c["knowledge_point_id"] for c in rag_chunks]
+            "rag_sources": rag_sources
         }
     except HTTPException:
         raise
@@ -341,6 +408,100 @@ async def get_optimization_suggestion(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to get optimization suggestion: {str(e)}"
+        ) from e
+
+
+@router.post("/hint")
+@limiter.limit("20/minute")
+async def get_ai_hint(
+    body: HintRequest,
+    request: Request,
+    current_user: Optional[User] = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+) -> Dict[str, Any]:
+    """
+    Get a dynamic AI-generated hint for a coding problem.
+
+    Level 1: Socratic question — one guiding question to make the student think.
+    Level 2: Direction hint — name the algorithm/pattern + high-level approach.
+    Level 3: Pseudocode — pseudocode framework with TODO comments.
+
+    Args:
+        body: HintRequest with question, code, language, hint_level, optional test_results.
+        request: FastAPI request (for rate limiter).
+        current_user: Optional authenticated user (for submission history context).
+        db: Database session.
+
+    Returns:
+        Dictionary containing hint text, hint_level, and rag_sources.
+
+    Raises:
+        HTTPException: If question not found (404), invalid level (400), or AI fails (500).
+    """
+    if not isinstance(body.question_id, int) or body.question_id <= 0:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid question_id")
+    if body.hint_level not in (1, 2, 3):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="hint_level must be 1, 2, or 3")
+
+    try:
+        stmt = select(QuizQuestion).where(QuizQuestion.id == body.question_id)
+        result = await db.execute(stmt)
+        question = result.scalar_one_or_none()
+        if not question:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Question not found")
+
+        # RAG: retrieve relevant course material
+        rag_chunks = await search_relevant_chunks(
+            query=f"{question.title} {question.description or ''}",
+            db=db,
+            knowledge_point_id=question.knowledge_point_id,
+            top_k=2
+        )
+        rag_context = build_rag_context(rag_chunks)
+
+        # RAG source names for attribution
+        kp_names: Dict[int, str] = {}
+        if rag_chunks:
+            kp_ids = list({c["knowledge_point_id"] for c in rag_chunks})
+            kp_result = await db.execute(
+                select(KnowledgePoint).where(KnowledgePoint.id.in_(kp_ids))
+            )
+            for kp in kp_result.scalars().all():
+                kp_names[kp.id] = kp.name
+
+        ai_service = get_ai_service()
+        hint_result = await ai_service.get_dynamic_hint(
+            code=body.code,
+            language=body.language,
+            problem_description=question.description or question.title,
+            hint_level=body.hint_level,
+            test_results=body.test_results,
+            rag_context=rag_context
+        )
+
+        if not hint_result.get("success", False):
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"AI service error: {hint_result.get('error', 'Unknown error')}"
+            )
+
+        rag_sources = [
+            {"id": c["knowledge_point_id"], "name": kp_names.get(c["knowledge_point_id"], "Course Material")}
+            for c in rag_chunks
+        ]
+
+        return {
+            "success": True,
+            "hint": hint_result["hint"],
+            "hint_level": body.hint_level,
+            "rag_sources": rag_sources
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to get AI hint: {str(e)}"
         ) from e
 
 

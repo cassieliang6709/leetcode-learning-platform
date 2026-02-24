@@ -10,6 +10,7 @@ Author: Yue Liang
 
 from typing import List, Dict, Any, Optional
 from fastapi import APIRouter, Depends, HTTPException, Request, status
+from sqlalchemy import text as sql_text
 from pydantic import BaseModel
 from slowapi import Limiter
 from slowapi.util import get_remote_address
@@ -24,6 +25,63 @@ from app.services.auth_service import get_current_user
 limiter = Limiter(key_func=get_remote_address)
 
 router = APIRouter()
+
+# Default starter code templates when a question has no starter_code stored
+DEFAULT_STARTER_CODE: Dict[str, str] = {
+    "python": (
+        "from typing import List, Dict, Optional, Set, Tuple, Any\n"
+        "import sys\nimport json\n\n"
+        "class Solution:\n"
+        "    def solve(self):\n"
+        "        # Write your solution here\n"
+        "        pass\n\n"
+        "# Test framework - DO NOT MODIFY\n"
+        "if __name__ == \"__main__\":\n"
+        "    input_data = sys.stdin.read().strip()\n"
+        "    sol = Solution()\n"
+        "    result = sol.solve()\n"
+        "    if isinstance(result, (list, dict)):\n"
+        "        print(json.dumps(result, separators=(',', ':')))\n"
+        "    else:\n"
+        "        print(result)\n"
+    ),
+    "javascript": (
+        "/**\n * @param {any} input\n * @return {any}\n */\n"
+        "var solve = function(input) {\n"
+        "    // Write your solution here\n"
+        "};\n\n"
+        "// Read stdin\n"
+        "const lines = require('fs').readFileSync('/dev/stdin','utf8').trim().split('\\n');\n"
+        "const result = solve(lines);\n"
+        "console.log(JSON.stringify(result));\n"
+    ),
+    "java": (
+        "import java.util.*;\n\n"
+        "class Solution {\n"
+        "    public Object solve() {\n"
+        "        // Write your solution here\n"
+        "        return null;\n"
+        "    }\n\n"
+        "    public static void main(String[] args) {\n"
+        "        Solution sol = new Solution();\n"
+        "        System.out.println(sol.solve());\n"
+        "    }\n"
+        "}\n"
+    ),
+    "cpp": (
+        "#include <bits/stdc++.h>\nusing namespace std;\n\n"
+        "class Solution {\npublic:\n"
+        "    void solve() {\n"
+        "        // Write your solution here\n"
+        "    }\n"
+        "};\n\n"
+        "int main() {\n"
+        "    Solution sol;\n"
+        "    sol.solve();\n"
+        "    return 0;\n"
+        "}\n"
+    ),
+}
 
 
 # Request/Response Models
@@ -100,10 +158,26 @@ async def submit_code(
             )
 
         if not question.test_cases:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="This question has no test cases configured"
-            )
+            # Try sibling with same leetcode_id that has test_cases
+            if question.leetcode_id:
+                sib_result = await db.execute(
+                    select(QuizQuestion)
+                    .where(
+                        QuizQuestion.leetcode_id == question.leetcode_id,
+                        QuizQuestion.id != question.id
+                    )
+                    .order_by(QuizQuestion.id)
+                )
+                siblings = sib_result.scalars().all()
+                for sib in siblings:
+                    if sib.test_cases and len(sib.test_cases) > 0:
+                        question = sib
+                        break
+            if not question.test_cases:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="This question has no test cases configured"
+                )
 
         # Execute code with test cases
         execution_result = await execute_user_code(
@@ -182,15 +256,36 @@ async def get_starter_code(
         starter_code = question.starter_code or {}
         if not isinstance(starter_code, dict):
             starter_code = {}
-        
+
+        # If this record has no starter_code, look for a sibling with the same
+        # leetcode_id that does (dedup: multiple init scripts created duplicates)
+        if not starter_code and question.leetcode_id:
+            sib_result = await db.execute(
+                select(QuizQuestion)
+                .where(
+                    QuizQuestion.leetcode_id == question.leetcode_id,
+                    QuizQuestion.id != question.id,
+                    QuizQuestion.starter_code.isnot(None)
+                )
+                .order_by(QuizQuestion.id)
+                .limit(1)
+            )
+            sib = sib_result.scalar_one_or_none()
+            if sib and isinstance(sib.starter_code, dict):
+                starter_code = sib.starter_code
+
         code = starter_code.get(language, "")
-        
+
+        # Final fallback: generic template for the requested language
+        if not code:
+            code = DEFAULT_STARTER_CODE.get(language, f"# {language} - Write your solution here\n")
+
         return {
             "question_id": question_id,
             "language": language,
             "code": code,
             "available_languages": (
-                list(starter_code.keys()) if starter_code else []
+                list(starter_code.keys()) if starter_code else list(DEFAULT_STARTER_CODE.keys())
             )
         }
     except HTTPException:
