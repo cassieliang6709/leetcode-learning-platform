@@ -1,0 +1,96 @@
+version: "3.9"
+
+# AlgoMentor - Production Stack
+#
+# Usage:
+#   docker compose -f docker-compose.prod.yml up -d --build
+#
+# First-time setup after containers are up:
+#   docker compose -f docker-compose.prod.yml exec piston piston install python 3.10.0
+#   docker compose -f docker-compose.prod.yml exec piston piston install javascript 18.15.0
+#   docker compose -f docker-compose.prod.yml exec piston piston install java 15.0.2
+#   docker compose -f docker-compose.prod.yml exec backend python scripts/init_db.py
+#   docker compose -f docker-compose.prod.yml exec backend python scripts/init_sample_questions.py
+
+services:
+
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: algomentor_postgres
+    environment:
+      POSTGRES_DB: algomentor
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./scripts/init_db.sql:/docker-entrypoint-initdb.d/01_init.sql
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d algomentor"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    container_name: algomentor_redis
+    command: redis-server --save "" --appendonly no
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  piston:
+    image: ghcr.io/engineer-man/piston
+    container_name: algomentor_piston
+    privileged: true
+    volumes:
+      - piston_data:/piston
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:2000/api/v2/runtimes || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: algomentor_backend
+    environment:
+      DATABASE_URL: postgresql+asyncpg://postgres:${POSTGRES_PASSWORD}@postgres:5432/algomentor
+      REDIS_URL: redis://redis:6379
+      PISTON_URL: http://piston:2000/api/v2
+      SECRET_KEY: ${SECRET_KEY:?SECRET_KEY is required}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      CORS_ORIGINS: ${CORS_ORIGINS:-}
+      SQL_ECHO: "false"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      piston:
+        condition: service_healthy
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        VITE_API_URL: /api
+    container_name: algomentor_frontend
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  piston_data:

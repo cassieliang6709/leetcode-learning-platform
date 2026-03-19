@@ -1,8 +1,9 @@
 """
-SiliconFlow AI Service.
+Gemini AI Service.
 
-Integrates with SiliconFlow API for AI-powered code suggestions,
-chat functionality, and optimization recommendations.
+Integrates with Google Gemini API (OpenAI-compatible endpoint) for
+AI-powered code suggestions, chat functionality, and optimization
+recommendations.
 
 This service provides intelligent tutoring features including:
 - Failure analysis and suggestions
@@ -20,37 +21,37 @@ import aiohttp
 
 class SiliconFlowAI:
     """
-    SiliconFlow AI client for code suggestions and chat.
+    Gemini AI client for code suggestions and chat.
 
     Provides AI-powered features for code analysis, suggestions,
     and interactive tutoring. Falls back to basic responses if
     API key is not configured.
 
     Attributes:
-        api_url: SiliconFlow API endpoint URL.
+        api_url: Gemini OpenAI-compatible API endpoint URL.
         api_key: API key from environment variable.
         fallback_mode: Boolean indicating if fallback mode is active.
         model: AI model identifier.
         headers: HTTP headers for API requests.
     """
-    
+
     def __init__(self) -> None:
         """
-        Initialize SiliconFlow AI client.
+        Initialize Gemini AI client.
 
-        Reads API key from environment variable and sets up
+        Reads API key from GEMINI_API_KEY environment variable and sets up
         fallback mode if key is not available.
         """
-        self.api_url: str = "https://api.siliconflow.cn/v1/chat/completions"
-        self.api_key: Optional[str] = os.getenv("SILICONFLOW_API_KEY")
-        
+        self.api_url: str = "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions"
+        self.api_key: Optional[str] = os.getenv("GEMINI_API_KEY")
+
         # Make API key optional - will use fallback mode if not set
         if not self.api_key:
             self.fallback_mode: bool = True
         else:
             self.fallback_mode: bool = False
-        
-        self.model: str = "Qwen/Qwen3-30B-A3B-Instruct-2507"
+
+        self.model: str = "models/gemini-2.5-flash"
         self.headers: Dict[str, str] = {
             "Authorization": f"Bearer {self.api_key or ''}",
             "Content-Type": "application/json"
@@ -93,8 +94,8 @@ class SiliconFlowAI:
                 "success": True,
                 "content": (
                     "AI features are not yet configured. Please add "
-                    "SILICONFLOW_API_KEY to the backend/.env file to enable "
-                    "full AI tutoring functionality"
+                    "GEMINI_API_KEY to the backend/.env file to enable "
+                    "full AI tutoring functionality."
                 ),
                 "usage": {}
             }

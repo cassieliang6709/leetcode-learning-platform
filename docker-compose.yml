@@ -92,7 +92,7 @@ services:
       # Auth
       SECRET_KEY: ${SECRET_KEY:-dev-secret-change-in-production}
       # AI (optional - falls back to demo mode if not set)
-      SILICONFLOW_API_KEY: ${SILICONFLOW_API_KEY:-}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
       # Debug
       SQL_ECHO: "false"
     ports:
