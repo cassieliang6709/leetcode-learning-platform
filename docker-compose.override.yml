@@ -1,0 +1,7 @@
+# Development overrides — applied automatically by `docker compose up`
+# Adds hot-reload volume mount for the backend.
+# Do NOT include this file in production deployments.
+services:
+  backend:
+    volumes:
+      - ./backend:/app

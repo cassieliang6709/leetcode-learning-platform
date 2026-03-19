@@ -1,22 +1,19 @@
 """
 Authentication service for user authentication and authorization.
 
-This module provides password hashing, JWT token creation and validation,
-and user authentication functions for the LeetCode Learning Platform.
-
-It uses bcrypt for password hashing and JWT (JSON Web Tokens) for
-session management. All authentication functions include proper error
-handling and security best practices.
+Uses bcrypt for password hashing and JWT for session management.
+Tokens are delivered as httpOnly cookies (with Authorization header fallback).
 
 Author: Yue Liang
 """
 
 import os
+import warnings
 import bcrypt as _bcrypt
 from datetime import datetime, timedelta, timezone
 from typing import Optional
 from jose import JWTError, jwt
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
@@ -29,6 +26,15 @@ SECRET_KEY = os.getenv(
     "SECRET_KEY",
     "your-secret-key-change-this-in-production-use-env-variable"
 )
+_PLACEHOLDER_KEY = "your-secret-key-change-this-in-production-use-env-variable"
+if SECRET_KEY == _PLACEHOLDER_KEY:
+    warnings.warn(
+        "SECRET_KEY is the insecure placeholder default. "
+        "Set a strong SECRET_KEY environment variable before deploying to production.",
+        RuntimeWarning,
+        stacklevel=1,
+    )
+
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24 * 7  # 7 days
 
@@ -44,38 +50,14 @@ def _to_bcrypt_bytes(password: str) -> bytes:
 
 
 def hash_password(password: str) -> str:
-    """
-    Hash a plain text password using bcrypt.
-
-    Uses bcrypt directly (bypassing passlib) for compatibility with
-    bcrypt 4.0+ which removed the __about__ attribute that passlib 1.7.4
-    relies on for version detection.
-
-    Args:
-        password: Plain text password to hash.
-
-    Returns:
-        Hashed password string.
-
-    Raises:
-        ValueError: If password is empty or invalid.
-    """
+    """Hash a plain text password using bcrypt."""
     if not password or not isinstance(password, str):
         raise ValueError("Password must be a non-empty string")
     return _bcrypt.hashpw(_to_bcrypt_bytes(password), _bcrypt.gensalt()).decode("utf-8")
 
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
-    """
-    Verify a plain text password against a hashed password.
-
-    Args:
-        plain_password: Plain text password to verify.
-        hashed_password: Previously hashed password to compare against.
-
-    Returns:
-        True if passwords match, False otherwise.
-    """
+    """Verify a plain text password against its bcrypt hash."""
     if not plain_password or not isinstance(plain_password, str):
         return False
     if not hashed_password or not isinstance(hashed_password, str):
@@ -92,104 +74,63 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
 def create_access_token(
     data: dict, expires_delta: Optional[timedelta] = None
 ) -> str:
-    """
-    Create a JWT access token for user authentication.
-
-    The token includes expiration time and user identification data.
-    Backend uses this token to identify the current user.
-
-    Args:
-        data: Dictionary containing user data (typically includes "sub" key
-            with user ID).
-        expires_delta: Optional custom expiration time. If not provided,
-            uses default ACCESS_TOKEN_EXPIRE_MINUTES.
-
-    Returns:
-        Encoded JWT token string.
-
-    Raises:
-        ValueError: If data is empty or invalid.
-        Exception: If JWT encoding fails.
-    """
+    """Create a signed JWT access token."""
     if not data or not isinstance(data, dict):
         raise ValueError("Token data must be a non-empty dictionary")
-
     to_encode = data.copy()
-    if expires_delta:
-        expire = datetime.now(timezone.utc) + expires_delta
-    else:
-        expire = datetime.now(timezone.utc) + timedelta(
-            minutes=ACCESS_TOKEN_EXPIRE_MINUTES
-        )
+    expire = datetime.now(timezone.utc) + (
+        expires_delta if expires_delta
+        else timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    )
     to_encode.update({"exp": expire})
-    
     try:
-        encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
-        return encoded_jwt
+        return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
     except Exception as e:
         raise Exception(f"Failed to create access token: {e}") from e
 
+
+def _resolve_token(request: Request, header_token: Optional[str]) -> Optional[str]:
+    """Return token from Authorization header, or fall back to httpOnly cookie."""
+    if header_token:
+        return header_token
+    return request.cookies.get("access_token")
+
+
 async def get_current_user(
+    request: Request,
     token: Optional[str] = Depends(oauth2_scheme),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ) -> Optional[User]:
     """
-    Get current authenticated user from JWT token.
+    Get current authenticated user from JWT token (header or httpOnly cookie).
 
-    This function allows optional authentication - returns None if no token
-    is provided, allowing routes to work for both authenticated and
-    unauthenticated users.
-
-    Args:
-        token: Optional JWT token from request headers.
-        db: Database session dependency.
-
-    Returns:
-        User object if token is valid, None if no token provided.
-
-    Raises:
-        HTTPException: If token is invalid, expired, or user not found.
+    Returns None for unauthenticated requests so that routes can handle
+    both authenticated and guest users.
     """
-    if not token:
+    resolved_token = _resolve_token(request, token)
+    if not resolved_token:
         return None
-    
+
     try:
-        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        payload = jwt.decode(resolved_token, SECRET_KEY, algorithms=[ALGORITHM])
         user_id = payload.get("sub")
         if user_id is None:
             return None
         user_id = int(user_id)
     except (JWTError, ValueError, TypeError):
-        # Invalid or expired token — treat as unauthenticated guest
         return None
 
     try:
         result = await db.execute(select(User).where(User.id == user_id))
-        user = result.scalar_one_or_none()
+        return result.scalar_one_or_none()
     except Exception:
         return None
 
-    return user
-
 
 async def get_current_user_required(
-    current_user: Optional[User] = Depends(get_current_user)
+    current_user: Optional[User] = Depends(get_current_user),
 ) -> User:
-    """
-    Require authenticated user for protected routes.
-
-    This function ensures that only authenticated users can access
-    the route. Raises 401 error if user is not authenticated.
-
-    Args:
-        current_user: Optional user from get_current_user dependency.
-
-    Returns:
-        User object if authenticated.
-
-    Raises:
-        HTTPException: If user is not authenticated (401 Unauthorized).
-    """
+    """Require an authenticated user; raise 401 if not authenticated."""
     if current_user is None:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -197,4 +138,3 @@ async def get_current_user_required(
             headers={"WWW-Authenticate": "Bearer"},
         )
     return current_user
-

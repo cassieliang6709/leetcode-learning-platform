@@ -105,9 +105,6 @@ services:
       piston:
         condition: service_healthy
     restart: unless-stopped
-    volumes:
-      # Mount for live reload during development (remove in production)
-      - ./backend:/app
 
 volumes:
   postgres_data:

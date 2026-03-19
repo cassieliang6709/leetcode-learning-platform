@@ -15,8 +15,6 @@ const HomePage = () => {
   const navigate = useNavigate()
   const { isAuthenticated, user } = useAuth()
   
-  const userId = user?.id
-
   useEffect(() => {
     loadDailyQuiz()
   }, [])
@@ -26,10 +24,10 @@ const HomePage = () => {
       setLoading(false)
       return
     }
-    
+
     setLoading(true)
     try {
-      const response = await api.getDailyQuiz(userId)
+      const response = await api.getDailyQuiz()
       setQuestions(response.data.questions)
       setProgress({
         answered_count: response.data.answered_count,
@@ -64,7 +62,7 @@ const HomePage = () => {
 
     setSubmitting(true)
     try {
-      const response = await api.submitAnswer(userId, questionId, selectedOption)
+      const response = await api.submitAnswer(questionId, selectedOption)
       
       setAnsweredQuestions({
         ...answeredQuestions,
@@ -158,53 +156,6 @@ const HomePage = () => {
         </div>
       </section>
 
-      {/* Guest Mode Notice */}
-      {!isAuthenticated && (
-        <section className="guest-notice-section" style={{
-          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-          borderRadius: '12px',
-          padding: '2rem',
-          marginBottom: '2rem',
-          color: 'white',
-          textAlign: 'center'
-        }}>
-          <h2 style={{ marginBottom: '1rem', fontSize: '1.5rem' }}>👋 Welcome to AlgoMentor!</h2>
-          <p style={{ marginBottom: '1.5rem', opacity: 0.9 }}>
-            You are browsing as a guest. Sign in to save your progress, view personal stats, and unlock more features.
-          </p>
-          <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center' }}>
-            <Link
-              to="/login"
-              style={{
-                padding: '0.75rem 1.5rem',
-                background: 'white',
-                color: '#667eea',
-                borderRadius: '8px',
-                textDecoration: 'none',
-                fontWeight: '600',
-                transition: 'transform 0.2s'
-              }}
-            >
-              Sign In
-            </Link>
-            <Link
-              to="/register"
-              style={{
-                padding: '0.75rem 1.5rem',
-                background: 'rgba(255, 255, 255, 0.2)',
-                color: 'white',
-                border: '2px solid white',
-                borderRadius: '8px',
-                textDecoration: 'none',
-                fontWeight: '600',
-                transition: 'transform 0.2s'
-              }}
-            >
-              Sign Up
-            </Link>
-          </div>
-        </section>
-      )}
 
       {/* Daily Challenge Section */}
       <section className="challenge-section">
@@ -221,23 +172,28 @@ const HomePage = () => {
             borderRadius: '12px',
             border: '1px solid var(--border-color)'
           }}>
-            <p style={{ marginBottom: '1rem', color: 'var(--text-secondary)' }}>
-              💡 Sign in to participate in the daily challenge and save your progress
+            <p style={{ marginBottom: '1.5rem', color: 'var(--text-secondary)', fontSize: '1rem' }}>
+              💡 Sign in to unlock the daily challenge and track your progress
             </p>
-            <Link
-              to="/login"
-              style={{
-                display: 'inline-block',
-                padding: '0.75rem 1.5rem',
+            <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center' }}>
+              <Link to="/login" style={{
+                padding: '0.6rem 1.4rem',
                 background: 'var(--accent-primary)',
                 color: 'white',
                 borderRadius: '8px',
                 textDecoration: 'none',
                 fontWeight: '600'
-              }}
-            >
-              Sign In Now
-            </Link>
+              }}>Sign In</Link>
+              <Link to="/register" style={{
+                padding: '0.6rem 1.4rem',
+                background: 'transparent',
+                color: 'var(--accent-primary)',
+                border: '1px solid var(--accent-primary)',
+                borderRadius: '8px',
+                textDecoration: 'none',
+                fontWeight: '600'
+              }}>Create Account</Link>
+            </div>
           </div>
         ) : (
 

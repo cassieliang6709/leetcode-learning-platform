@@ -20,46 +20,28 @@ from sqlalchemy import select, and_
 from app.database import get_db
 from app.models import (
     QuizQuestion, QuizAttempt, KnowledgePoint,
-    DailyKnowledgeQuestion, DailyKnowledgeAttempt
+    DailyKnowledgeQuestion, DailyKnowledgeAttempt, User
 )
 from app.schemas import (
     QuizQuestionResponse, DailyQuizQuestion,
     QuizAnswerSubmit, DailyProgressResponse
 )
 from app.services.ai_service import generate_quiz_questions
+from app.services.auth_service import get_current_user_required
 
 router = APIRouter()
 
-@router.get("/daily/{user_id}", response_model=DailyProgressResponse)
+@router.get("/daily", response_model=DailyProgressResponse)
 async def get_daily_quiz(
-    user_id: int,
-    db: AsyncSession = Depends(get_db)
+    current_user: User = Depends(get_current_user_required),
+    db: AsyncSession = Depends(get_db),
 ) -> DailyProgressResponse:
     """
-    Get daily knowledge challenge questions.
+    Get daily knowledge challenge questions for the authenticated user.
 
     Returns 3 random questions excluding ones already answered today.
-    Includes progress information for the current day.
-
-    Args:
-        user_id: ID of the user requesting daily quiz.
-        db: Database session dependency.
-
-    Returns:
-        DailyProgressResponse containing:
-            - total_questions: Total questions for the day (3)
-            - answered_count: Number of questions answered today
-            - correct_count: Number of correct answers today
-            - questions: List of daily quiz questions
-
-    Raises:
-        HTTPException: If user_id is invalid or database error occurs.
     """
-    if not isinstance(user_id, int) or user_id <= 0:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Invalid user_id"
-        )
+    user_id = current_user.id
     try:
         # Get today's start time
         today_start = datetime.now().replace(
@@ -144,37 +126,14 @@ async def get_daily_quiz(
             detail=f"Failed to get daily quiz: {str(e)}"
         ) from e
 
-@router.post("/answer/{user_id}")
+@router.post("/answer")
 async def submit_answer(
-    user_id: int,
     answer: QuizAnswerSubmit,
-    db: AsyncSession = Depends(get_db)
+    current_user: User = Depends(get_current_user_required),
+    db: AsyncSession = Depends(get_db),
 ) -> Dict[str, Any]:
-    """
-    Submit answer for a daily knowledge question.
-
-    Validates the answer and records the attempt in the database.
-
-    Args:
-        user_id: ID of the user submitting the answer.
-        answer: QuizAnswerSubmit containing question_id and selected_option.
-        db: Database session dependency.
-
-    Returns:
-        Dictionary containing:
-            - is_correct: Boolean indicating if answer is correct
-            - message: Feedback message
-            - explanation: Explanation text (if incorrect)
-
-    Raises:
-        HTTPException: If question not found (404) or invalid input (400).
-    """
-    if not isinstance(user_id, int) or user_id <= 0:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Invalid user_id"
-        )
-
+    """Submit answer for a daily knowledge question."""
+    user_id = current_user.id
     try:
         # Get the question from daily_knowledge_questions
         question_result = await db.execute(
@@ -227,36 +186,13 @@ async def submit_answer(
         ) from e
 
 
-@router.get("/progress/{user_id}")
+@router.get("/progress")
 async def get_daily_progress(
-    user_id: int,
-    db: AsyncSession = Depends(get_db)
+    current_user: User = Depends(get_current_user_required),
+    db: AsyncSession = Depends(get_db),
 ) -> Dict[str, Any]:
-    """
-    Get today's daily knowledge challenge progress.
-
-    Returns statistics about the user's progress for the current day.
-
-    Args:
-        user_id: ID of the user.
-        db: Database session dependency.
-
-    Returns:
-        Dictionary containing:
-            - answered_count: Number of questions answered today
-            - correct_count: Number of correct answers
-            - total_questions: Total questions per day (3)
-            - percentage: Completion percentage
-
-    Raises:
-        HTTPException: If user_id is invalid or database error occurs.
-    """
-    if not isinstance(user_id, int) or user_id <= 0:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Invalid user_id"
-        )
-
+    """Get today's daily knowledge challenge progress for the authenticated user."""
+    user_id = current_user.id
     try:
         today_start = datetime.now().replace(
             hour=0, minute=0, second=0, microsecond=0
@@ -424,41 +360,19 @@ async def get_quiz_detail(
         ) from e
 
 
-@router.post("/{question_id}/attempt/{user_id}")
+@router.post("/{question_id}/attempt")
 async def submit_quiz_attempt(
     question_id: int,
-    user_id: int,
     is_correct: bool,
     hints_used: int = 0,
-    db: AsyncSession = Depends(get_db)
+    current_user: User = Depends(get_current_user_required),
+    db: AsyncSession = Depends(get_db),
 ) -> Dict[str, Any]:
-    """
-    Submit quiz attempt record.
-
-    Records a user's attempt at answering a quiz question.
-
-    Args:
-        question_id: ID of the quiz question.
-        user_id: ID of the user.
-        is_correct: Whether the answer was correct.
-        hints_used: Number of hints used (default: 0).
-        db: Database session dependency.
-
-    Returns:
-        Dictionary with success message and correctness status.
-
-    Raises:
-        HTTPException: If input is invalid or database error occurs.
-    """
+    """Record the authenticated user's attempt at a quiz question."""
     if not isinstance(question_id, int) or question_id <= 0:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Invalid question_id"
-        )
-    if not isinstance(user_id, int) or user_id <= 0:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Invalid user_id"
         )
     if not isinstance(hints_used, int) or hints_used < 0:
         raise HTTPException(
@@ -468,7 +382,7 @@ async def submit_quiz_attempt(
 
     try:
         attempt = QuizAttempt(
-            user_id=user_id,
+            user_id=current_user.id,
             question_id=question_id,
             is_correct=is_correct,
             hints_used=hints_used

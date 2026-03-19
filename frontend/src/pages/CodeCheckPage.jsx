@@ -69,10 +69,8 @@ const CodeCheckPage = () => {
   }
 
   const loadRecentSubmissions = async () => {
+    setLoadingSubmissions(true)
     try {
-      const token = localStorage.getItem('token')
-      if (!token) return
-      setLoadingSubmissions(true)
       const response = await api.getRecentSubmissions(15)
       setSubmissions(response.data.submissions || [])
     } catch (error) {
@@ -376,6 +374,12 @@ const CodeCheckPage = () => {
     }
   }
 
+  const fmt = (val) => {
+    if (val === null || val === undefined) return ''
+    if (typeof val === 'object') return JSON.stringify(val, null, 2)
+    return String(val)
+  }
+
   const getDifficultyColor = (difficulty) => {
     switch (difficulty) {
       case 'easy': return '#00b894'
@@ -593,8 +597,8 @@ const CodeCheckPage = () => {
                       <div key={idx} className="example-item">
                         <strong>Example {idx + 1}:</strong>
                         <div className="example-code">
-                          <div>Input: {tc.input}</div>
-                          <div>Output: {tc.expected}</div>
+                          <div>Input: {fmt(tc.input)}</div>
+                          <div>Output: {fmt(tc.expected)}</div>
                         </div>
                       </div>
                     ))}
@@ -771,11 +775,11 @@ const CodeCheckPage = () => {
                         <div className="test-case-content">
                           <div className="test-input">
                             <strong>Input:</strong>
-                            <pre>{tc.input}</pre>
+                            <pre>{fmt(tc.input)}</pre>
                           </div>
                           <div className="test-expected">
                             <strong>Expected Output:</strong>
-                            <pre>{tc.expected}</pre>
+                            <pre>{fmt(tc.expected)}</pre>
                           </div>
                         </div>
                       </div>
@@ -900,11 +904,11 @@ const CodeCheckPage = () => {
                         <div className="test-result-content">
                           <div className="test-detail">
                             <strong>Input:</strong>
-                            <pre>{result.input}</pre>
+                            <pre>{fmt(result.input)}</pre>
                           </div>
                           <div className="test-detail">
                             <strong>Expected:</strong>
-                            <pre>{result.expected}</pre>
+                            <pre>{fmt(result.expected)}</pre>
                           </div>
                           <div className="test-detail">
                             <strong>Your Output:</strong>
@@ -1285,11 +1289,11 @@ const CodeCheckPage = () => {
                         <div className="test-result-content">
                           <div className="test-detail">
                             <strong>Input:</strong>
-                            <pre>{result.input}</pre>
+                            <pre>{fmt(result.input)}</pre>
                           </div>
                           <div className="test-detail">
                             <strong>Expected:</strong>
-                            <pre>{result.expected}</pre>
+                            <pre>{fmt(result.expected)}</pre>
                           </div>
                           <div className="test-detail">
                             <strong>Your Output:</strong>

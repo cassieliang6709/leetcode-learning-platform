@@ -26,6 +26,7 @@ from app.schemas import (
     QuizQuestionResponse
 )
 from app.services.ai_service import generate_learning_plan
+from app.services.auth_service import get_current_user_required
 
 router = APIRouter()
 
@@ -153,48 +154,15 @@ async def get_knowledge_point_questions(
         ) from e
 
 
-@router.post("/test/{user_id}", response_model=KnowledgeTestResponse)
+@router.post("/test", response_model=KnowledgeTestResponse)
 async def submit_knowledge_test(
-    user_id: int,
     test_data: KnowledgeTestCreate,
-    db: AsyncSession = Depends(get_db)
+    current_user: User = Depends(get_current_user_required),
+    db: AsyncSession = Depends(get_db),
 ) -> KnowledgeTestResponse:
-    """
-    Submit knowledge test and generate learning plan.
-
-    Calculates test score, saves the result, and generates an AI-powered
-    learning plan with recommended knowledge points.
-
-    Args:
-        user_id: ID of the user taking the test.
-        test_data: Test data containing answers.
-        db: Database session dependency.
-
-    Returns:
-        KnowledgeTestResponse with test results and AI-generated plan.
-
-    Raises:
-        HTTPException: If user not found (404) or processing fails (500).
-    """
-    if not isinstance(user_id, int) or user_id <= 0:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Invalid user_id"
-        )
-
+    """Submit knowledge test and generate a personalized learning plan."""
+    user_id = current_user.id
     try:
-        # Check if user exists
-        user_result = await db.execute(
-            select(User).where(User.id == user_id)
-        )
-        user = user_result.scalar_one_or_none()
-        
-        if not user:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="User not found"
-            )
-
         # Calculate score
         score = calculate_test_score(test_data.test_data)
 
@@ -262,30 +230,13 @@ async def submit_knowledge_test(
         ) from e
 
 
-@router.get("/plan/{user_id}")
+@router.get("/plan")
 async def get_learning_plan(
-    user_id: int,
-    db: AsyncSession = Depends(get_db)
+    current_user: User = Depends(get_current_user_required),
+    db: AsyncSession = Depends(get_db),
 ) -> Dict[str, Any]:
-    """
-    Get user's active learning plan.
-
-    Args:
-        user_id: ID of the user.
-        db: Database session dependency.
-
-    Returns:
-        Dictionary containing list of active learning plans.
-
-    Raises:
-        HTTPException: If no active plan found (404) or database error.
-    """
-    if not isinstance(user_id, int) or user_id <= 0:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Invalid user_id"
-        )
-
+    """Get the authenticated user's active learning plan."""
+    user_id = current_user.id
     try:
         result = await db.execute(
             select(LearningPlan)

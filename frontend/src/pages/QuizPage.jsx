@@ -53,7 +53,7 @@ const QuizPage = () => {
     if (!currentQuestion) return
 
     try {
-      await api.submitQuizAttempt(currentQuestion.id, 1, true, currentHintLevel)
+      await api.submitQuizAttempt(currentQuestion.id, true, currentHintLevel)
       alert('Great job! Moving to next question...')
       
       if (selectedQuestionIndex < questions.length - 1) {

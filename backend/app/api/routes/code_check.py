@@ -22,7 +22,7 @@ from app.models import CodeSubmission, QuizQuestion, User
 from app.schemas import CodeSubmissionCreate, CodeCheckResponse
 from app.services.ai_service import get_hint_by_level
 from app.services.gemini_ai import get_ai_service
-from app.services.auth_service import get_current_user
+from app.services.auth_service import get_current_user, get_current_user_required
 
 router = APIRouter()
 
@@ -435,34 +435,15 @@ async def get_problem_detail(
         ) from e
 
 
-@router.get("/submissions/{user_id}")
+@router.get("/submissions/me")
 async def get_user_submissions(
-    user_id: int,
     question_id: Optional[int] = None,
-    db: AsyncSession = Depends(get_db)
+    current_user: User = Depends(get_current_user_required),
+    db: AsyncSession = Depends(get_db),
 ) -> Dict[str, Any]:
-    """
-    Get user's code submissions.
-
-    Args:
-        user_id: ID of the user.
-        question_id: Optional question ID to filter submissions.
-        db: Database session dependency.
-
-    Returns:
-        Dictionary containing list of user submissions.
-
-    Raises:
-        HTTPException: If user_id is invalid or database error occurs.
-    """
-    if not isinstance(user_id, int) or user_id <= 0:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Invalid user_id"
-        )
-
+    """Get the authenticated user's code submissions, optionally filtered by question."""
     try:
-        query = select(CodeSubmission).where(CodeSubmission.user_id == user_id)
+        query = select(CodeSubmission).where(CodeSubmission.user_id == current_user.id)
         if question_id:
             if not isinstance(question_id, int) or question_id <= 0:
                 raise HTTPException(
