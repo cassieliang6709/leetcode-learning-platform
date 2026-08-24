@@ -10,19 +10,37 @@ const apiClient = axios.create({
   withCredentials: true, // Send httpOnly auth cookie with every request
 })
 
-// Response interceptor: on 401, clear local user cache and redirect to login
+// Track whether a token refresh is already in-flight to avoid parallel refresh storms
+let _refreshPromise = null
+
 apiClient.interceptors.response.use(
   (response) => response,
-  (error) => {
-    if (error.response?.status === 401) {
-      const url = error.config?.url || ''
-      // Don't redirect for auth endpoints — let the form show the error
-      const isAuthEndpoint = url.includes('/auth/')
-      if (!isAuthEndpoint) {
+  async (error) => {
+    const originalRequest = error.config
+    const url = originalRequest?.url || ''
+    const isAuthEndpoint = url.includes('/auth/')
+
+    // On 401 for non-auth endpoints: attempt one silent token refresh
+    if (error.response?.status === 401 && !isAuthEndpoint && !originalRequest._retried) {
+      originalRequest._retried = true
+
+      try {
+        if (!_refreshPromise) {
+          _refreshPromise = apiClient.post('/auth/refresh').finally(() => {
+            _refreshPromise = null
+          })
+        }
+        await _refreshPromise
+        // Retry the original request — the new access_token cookie is now set
+        return apiClient(originalRequest)
+      } catch {
+        // Refresh itself failed (expired / revoked) — clear user and dispatch event
+        // so AuthContext can update state without a hard page reload
         localStorage.removeItem('user')
-        window.location.href = '/login'
+        window.dispatchEvent(new CustomEvent('auth:expired'))
       }
     }
+
     return Promise.reject(error)
   }
 )
@@ -153,6 +171,9 @@ export const api = {
 
   register: (username, email, password) =>
     apiClient.post('/auth/register', { username, email, password }),
+
+  refresh: () =>
+    apiClient.post('/auth/refresh'),
 
   logout: () =>
     apiClient.post('/auth/logout'),

@@ -144,7 +144,7 @@ curl -X POST http://localhost:8000/api/rag/index/all
 ```bash
 # Backend
 cd backend
-python -m venv venv && source venv/bin/activate
+python -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
 cp .env.example .env
 uvicorn main:app --reload --port 8000

@@ -23,7 +23,7 @@ CURRENT_USER = getpass.getuser()
 
 DATABASE_URL = os.getenv(
     "DATABASE_URL",
-    f"postgresql+asyncpg://{CURRENT_USER}@localhost:5432/leetcode_learning"
+    f"postgresql+asyncpg://{CURRENT_USER}@localhost:5432/algomentor"
 )
 
 # Remove pgbouncer parameter if present (asyncpg doesn't support it)
@@ -95,5 +95,4 @@ async def init_db() -> None:
             await conn.run_sync(Base.metadata.create_all)
     except Exception as e:
         raise Exception(f"Failed to initialize database: {e}") from e
-
 

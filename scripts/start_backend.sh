@@ -4,6 +4,7 @@
 set -e
 
 PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+VENV_DIR=".venv"
 
 GREEN='\033[0;32m'
 BLUE='\033[0;34m'
@@ -14,13 +15,13 @@ echo -e "${BLUE}🔧 Starting backend service...${NC}"
 cd "$PROJECT_ROOT/backend"
 
 # Activate virtual environment
-if [ ! -d "venv" ]; then
+if [ ! -d "$VENV_DIR" ]; then
     echo -e "${BLUE}📦 Creating virtual environment...${NC}"
-    python3.12 -m venv venv || python3 -m venv venv
-    source venv/bin/activate
+    python3.12 -m venv "$VENV_DIR" || python3 -m venv "$VENV_DIR"
+    source "$VENV_DIR/bin/activate"
     pip install -r requirements.txt
 else
-    source venv/bin/activate
+    source "$VENV_DIR/bin/activate"
 fi
 
 # Start service
@@ -29,4 +30,3 @@ echo -e "${BLUE}🔧 API URL: http://localhost:8000${NC}"
 echo -e "${BLUE}📚 API Docs: http://localhost:8000/docs${NC}"
 
 uvicorn main:app --reload --host localhost --port 8000
-

@@ -7,6 +7,19 @@ echo "🚀 Starting LeetCode Learning Platform..."
 
 # Get project root directory
 PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+ENV_FILE="$PROJECT_ROOT/backend/.env"
+DEFAULT_DATABASE_URL="postgresql+asyncpg://postgres:postgres@localhost:5432/algomentor"
+VENV_DIR=".venv"
+
+if [ -f "$ENV_FILE" ]; then
+    set -a
+    source "$ENV_FILE"
+    set +a
+fi
+
+DATABASE_URL="${DATABASE_URL:-$DEFAULT_DATABASE_URL}"
+DB_NAME="${DATABASE_URL##*/}"
+DB_NAME="${DB_NAME%%\?*}"
 
 # Color output
 GREEN='\033[0;32m'
@@ -24,10 +37,10 @@ fi
 echo -e "${GREEN}✅ PostgreSQL is running${NC}"
 
 # Check if database exists
-DB_EXISTS=$(psql -lqt | cut -d \| -f 1 | grep -w leetcode_learning | wc -l)
+DB_EXISTS=$(psql -lqt | cut -d \| -f 1 | grep -w "$DB_NAME" | wc -l)
 if [ "$DB_EXISTS" -eq 0 ]; then
     echo -e "${BLUE}📊 Creating database...${NC}"
-    psql -d postgres -c "CREATE DATABASE leetcode_learning;"
+    psql -d postgres -c "CREATE DATABASE $DB_NAME;"
     echo -e "${GREEN}✅ Database created successfully${NC}"
 fi
 
@@ -36,12 +49,12 @@ echo -e "${BLUE}🔧 Starting backend service...${NC}"
 cd "$PROJECT_ROOT/backend"
 
 # Check virtual environment
-if [ ! -d "venv" ]; then
+if [ ! -d "$VENV_DIR" ]; then
     echo -e "${BLUE}📦 Creating virtual environment...${NC}"
-    python3.12 -m venv venv || python3 -m venv venv
+    python3.12 -m venv "$VENV_DIR" || python3 -m venv "$VENV_DIR"
 fi
 
-source venv/bin/activate
+source "$VENV_DIR/bin/activate"
 pip install -q -r requirements.txt
 
 # Start backend (background)
@@ -92,4 +105,3 @@ echo ""
 
 # Wait for user interrupt
 wait
-

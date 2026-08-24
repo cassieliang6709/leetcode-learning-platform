@@ -19,6 +19,15 @@ export const AuthProvider = ({ children }) => {
       }
     }
     verifySession();
+
+    // auth:expired is dispatched by the API interceptor when a refresh attempt
+    // fails — clear state here instead of doing a hard page redirect.
+    const handleExpired = () => {
+      setUser(null);
+      localStorage.removeItem('user');
+    };
+    window.addEventListener('auth:expired', handleExpired);
+    return () => window.removeEventListener('auth:expired', handleExpired);
   }, []);
 
   const verifySession = async () => {

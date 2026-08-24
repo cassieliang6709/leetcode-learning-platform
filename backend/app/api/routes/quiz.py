@@ -10,12 +10,16 @@ This module provides API endpoints for:
 Author: Yue Liang
 """
 
+import logging
 from datetime import datetime
 from typing import List, Dict, Any
 import random
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, and_
+from sqlalchemy.exc import SQLAlchemyError
+
+logger = logging.getLogger(__name__)
 
 from app.database import get_db
 from app.models import (
@@ -120,11 +124,9 @@ async def get_daily_quiz(
             correct_count=correct_count,
             questions=daily_questions
         )
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to get daily quiz: {str(e)}"
-        ) from e
+    except SQLAlchemyError:
+        logger.exception("DB error fetching daily quiz for user %s", user_id)
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Database error")
 
 @router.post("/answer")
 async def submit_answer(
@@ -178,12 +180,10 @@ async def submit_answer(
         }
     except HTTPException:
         raise
-    except Exception as e:
+    except SQLAlchemyError:
         await db.rollback()
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to submit answer: {str(e)}"
-        ) from e
+        logger.exception("DB error submitting answer for user %s", user_id)
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Database error")
 
 
 @router.get("/progress")
@@ -216,11 +216,9 @@ async def get_daily_progress(
             "total_questions": 3,
             "percentage": (len(attempts) / 3) * 100 if len(attempts) > 0 else 0
         }
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to get progress: {str(e)}"
-        ) from e
+    except SQLAlchemyError:
+        logger.exception("DB error fetching progress for user %s", user_id)
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Database error")
 
 
 @router.get(
@@ -307,12 +305,14 @@ async def get_quizzes_by_knowledge(
         return list(questions)
     except HTTPException:
         raise
-    except Exception as e:
+    except SQLAlchemyError:
         await db.rollback()
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to get quizzes: {str(e)}"
-        ) from e
+        logger.exception("DB error fetching quizzes for knowledge point %s", knowledge_point_id)
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Database error")
+    except Exception:
+        await db.rollback()
+        logger.exception("Unexpected error fetching quizzes for knowledge point %s", knowledge_point_id)
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal server error")
 
 
 @router.get("/{question_id}", response_model=QuizQuestionResponse)
@@ -353,11 +353,9 @@ async def get_quiz_detail(
         return question
     except HTTPException:
         raise
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to get quiz detail: {str(e)}"
-        ) from e
+    except SQLAlchemyError:
+        logger.exception("DB error fetching quiz question %s", question_id)
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Database error")
 
 
 @router.post("/{question_id}/attempt")
@@ -394,11 +392,9 @@ async def submit_quiz_attempt(
             "message": "Attempt recorded successfully",
             "is_correct": is_correct
         }
-    except Exception as e:
+    except SQLAlchemyError:
         await db.rollback()
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to submit attempt: {str(e)}"
-        ) from e
+        logger.exception("DB error recording attempt on question %s", question_id)
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Database error")
 
 

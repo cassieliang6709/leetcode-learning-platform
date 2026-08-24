@@ -9,10 +9,14 @@ This module provides API endpoints for:
 Author: Yue Liang
 """
 
+import logging
 from typing import List, Dict, Any
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
+from sqlalchemy.exc import SQLAlchemyError
+
+logger = logging.getLogger(__name__)
 
 from app.database import get_db
 from app.models import (
@@ -55,11 +59,9 @@ async def get_knowledge_points(
         )
         points = result.scalars().all()
         return list(points)
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to get knowledge points: {str(e)}"
-        ) from e
+    except SQLAlchemyError:
+        logger.exception("DB error fetching knowledge points")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Database error")
 
 
 @router.get(
@@ -104,11 +106,9 @@ async def get_knowledge_point_detail(
         return point
     except HTTPException:
         raise
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to get knowledge point: {str(e)}"
-        ) from e
+    except SQLAlchemyError:
+        logger.exception("DB error fetching knowledge point %s", point_id)
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Database error")
 
 
 @router.get(
@@ -147,11 +147,9 @@ async def get_knowledge_point_questions(
         )
         questions = result.scalars().all()
         return list(questions)
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to get questions: {str(e)}"
-        ) from e
+    except SQLAlchemyError:
+        logger.exception("DB error fetching questions for knowledge point %s", point_id)
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Database error")
 
 
 @router.post("/test", response_model=KnowledgeTestResponse)
@@ -222,12 +220,14 @@ async def submit_knowledge_test(
         }
     except HTTPException:
         raise
-    except Exception as e:
+    except SQLAlchemyError:
         await db.rollback()
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to submit test: {str(e)}"
-        ) from e
+        logger.exception("DB error submitting knowledge test for user %s", current_user.id)
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Database error")
+    except Exception:
+        await db.rollback()
+        logger.exception("Unexpected error submitting knowledge test")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal server error")
 
 
 @router.get("/plan")
@@ -261,11 +261,9 @@ async def get_learning_plan(
         }
     except HTTPException:
         raise
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to get learning plan: {str(e)}"
-        ) from e
+    except SQLAlchemyError:
+        logger.exception("DB error fetching learning plan for user %s", current_user.id)
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Database error")
 
 
 def calculate_test_score(test_data: Dict[str, Any]) -> int:

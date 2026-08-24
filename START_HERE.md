@@ -36,7 +36,7 @@ brew services start postgresql@14
 
 ```bash
 # 创建数据库
-psql -d postgres -c "CREATE DATABASE leetcode_learning;"
+psql -d postgres -c "CREATE DATABASE algomentor;"
 
 # 初始化数据
 python3 scripts/init_db.py
@@ -123,7 +123,7 @@ brew services list
 brew services start postgresql@14
 
 # 确认数据库存在
-psql -l | grep leetcode_learning
+psql -l | grep algomentor
 ```
 
 ### Python 环境问题
@@ -131,9 +131,9 @@ psql -l | grep leetcode_learning
 ```bash
 # 使用 Python 3.12
 cd backend
-rm -rf venv
-python3.12 -m venv venv
-source venv/bin/activate
+rm -rf .venv
+python3.12 -m venv .venv
+source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
@@ -144,4 +144,3 @@ pip install -r requirements.txt
 ---
 
 **需要帮助？** 查看 [CONNECTION_GUIDE.md](CONNECTION_GUIDE.md) 获取详细故障排查步骤。
-

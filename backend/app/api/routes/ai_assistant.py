@@ -8,6 +8,7 @@ service for intelligent tutoring features.
 Author: Yue Liang
 """
 
+import logging
 from typing import List, Dict, Any, Optional
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from pydantic import BaseModel
@@ -15,6 +16,9 @@ from slowapi import Limiter
 from slowapi.util import get_remote_address
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
+from sqlalchemy.exc import SQLAlchemyError
+
+logger = logging.getLogger(__name__)
 
 from app.database import get_db
 from app.models import QuizQuestion, KnowledgePoint, CodeSubmission, User
@@ -178,11 +182,12 @@ async def get_failure_suggestion(
         }
     except HTTPException:
         raise
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to get failure suggestion: {str(e)}"
-        ) from e
+    except SQLAlchemyError:
+        logger.exception("DB error in failure suggestion for question %s", request.question_id)
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Database error")
+    except Exception:
+        logger.exception("Unexpected error in failure suggestion for question %s", request.question_id)
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal server error")
 
 
 @router.post("/chat")
@@ -327,11 +332,12 @@ async def chat_with_ai(
         }
     except HTTPException:
         raise
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to chat with AI: {str(e)}"
-        ) from e
+    except SQLAlchemyError:
+        logger.exception("DB error in AI chat for question %s", body.question_id)
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Database error")
+    except Exception:
+        logger.exception("Unexpected error in AI chat for question %s", body.question_id)
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal server error")
 
 
 @router.post("/suggestion/optimization")
@@ -404,11 +410,12 @@ async def get_optimization_suggestion(
         }
     except HTTPException:
         raise
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to get optimization suggestion: {str(e)}"
-        ) from e
+    except SQLAlchemyError:
+        logger.exception("DB error in optimization suggestion for question %s", request.question_id)
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Database error")
+    except Exception:
+        logger.exception("Unexpected error in optimization suggestion for question %s", request.question_id)
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal server error")
 
 
 @router.post("/hint")
@@ -498,11 +505,12 @@ async def get_ai_hint(
         }
     except HTTPException:
         raise
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to get AI hint: {str(e)}"
-        ) from e
+    except SQLAlchemyError:
+        logger.exception("DB error in AI hint for question %s", body.question_id)
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Database error")
+    except Exception:
+        logger.exception("Unexpected error in AI hint for question %s", body.question_id)
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal server error")
 
 
 @router.get("/health")

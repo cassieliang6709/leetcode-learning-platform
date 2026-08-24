@@ -11,11 +11,15 @@ This module provides API endpoints for:
 Author: Yue Liang
 """
 
+import logging
 from typing import List, Dict, Any, Optional
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
+from sqlalchemy.exc import SQLAlchemyError
+
+logger = logging.getLogger(__name__)
 
 from app.database import get_db
 from app.models import CodeSubmission, QuizQuestion, User
@@ -91,11 +95,9 @@ async def analyze_code_quick(
             suggestions=suggestions,
             corrected_code=None
         )
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to analyze code: {str(e)}"
-        ) from e
+    except Exception:
+        logger.exception("Unexpected error in quick code analysis")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal server error")
 
 
 @router.post("/check", response_model=CodeCheckResponse)
@@ -171,12 +173,14 @@ async def check_code(
         )
     except HTTPException:
         raise
-    except Exception as e:
+    except SQLAlchemyError:
         await db.rollback()
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to check code: {str(e)}"
-        ) from e
+        logger.exception("DB error in code check")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Database error")
+    except Exception:
+        await db.rollback()
+        logger.exception("Unexpected error in code check")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal server error")
 
 
 @router.get("/hint/{question_id}/{hint_level}")
@@ -263,11 +267,9 @@ async def request_hint(
         return response
     except HTTPException:
         raise
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to get hint: {str(e)}"
-        ) from e
+    except SQLAlchemyError:
+        logger.exception("DB error fetching hint for question %s", question_id)
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Database error")
 
 
 @router.get("/problems")
@@ -346,11 +348,9 @@ async def get_problems(
         }
     except HTTPException:
         raise
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to get problems: {str(e)}"
-        ) from e
+    except SQLAlchemyError:
+        logger.exception("DB error fetching problems list")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Database error")
 
 
 @router.get("/problem/{question_id}")
@@ -428,11 +428,9 @@ async def get_problem_detail(
         }
     except HTTPException:
         raise
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to get problem detail: {str(e)}"
-        ) from e
+    except SQLAlchemyError:
+        logger.exception("DB error fetching problem %s", question_id)
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Database error")
 
 
 @router.get("/submissions/me")
@@ -473,10 +471,8 @@ async def get_user_submissions(
         }
     except HTTPException:
         raise
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to get submissions: {str(e)}"
-        ) from e
+    except SQLAlchemyError:
+        logger.exception("DB error fetching submissions for user %s", current_user.id)
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Database error")
 
 

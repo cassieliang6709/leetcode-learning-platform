@@ -17,7 +17,7 @@ Author: Yue Liang
 """
 
 from typing import List, Optional
-from sqlalchemy import Column, Integer, String, Text, DateTime, ForeignKey, Boolean, JSON
+from sqlalchemy import Column, Index, Integer, String, Text, DateTime, ForeignKey, Boolean, JSON
 from sqlalchemy.orm import relationship, Mapped
 from sqlalchemy.sql import func
 from pgvector.sqlalchemy import Vector
@@ -39,6 +39,8 @@ class User(Base):
     username: Mapped[str] = Column(String(50), unique=True, nullable=False, index=True)
     email: Mapped[str] = Column(String(100), unique=True, nullable=False, index=True)
     hashed_password: Mapped[str] = Column(String(255), nullable=False)
+    preferred_language: Mapped[str] = Column(String(20), default="python")
+    last_login_at: Mapped[Optional[DateTime]] = Column(DateTime(timezone=True))
     created_at: Mapped[DateTime] = Column(DateTime(timezone=True), server_default=func.now())
 
     # Relationships
@@ -97,7 +99,7 @@ class KnowledgeTest(Base):
     __tablename__ = "knowledge_tests"
 
     id: Mapped[int] = Column(Integer, primary_key=True, index=True)
-    user_id: Mapped[int] = Column(Integer, ForeignKey("users.id"), nullable=False)
+    user_id: Mapped[int] = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
     test_data: Mapped[Optional[dict]] = Column(JSON)  # Store test answers and results
     score: Mapped[Optional[int]] = Column(Integer)
     completed_at: Mapped[DateTime] = Column(
@@ -148,7 +150,7 @@ class QuizQuestion(Base):
 
     id: Mapped[int] = Column(Integer, primary_key=True, index=True)
     knowledge_point_id: Mapped[Optional[int]] = Column(
-        Integer, ForeignKey("knowledge_points.id")
+        Integer, ForeignKey("knowledge_points.id"), index=True
     )
     leetcode_id: Mapped[Optional[int]] = Column(Integer)  # LeetCode problem number
     title: Mapped[str] = Column(String(200), nullable=False)
@@ -183,11 +185,12 @@ class QuizAttempt(Base):
     __tablename__ = "quiz_attempts"
 
     id: Mapped[int] = Column(Integer, primary_key=True, index=True)
-    user_id: Mapped[int] = Column(Integer, ForeignKey("users.id"), nullable=False)
+    user_id: Mapped[int] = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
     question_id: Mapped[int] = Column(
-        Integer, ForeignKey("quiz_questions.id"), nullable=False
+        Integer, ForeignKey("quiz_questions.id"), nullable=False, index=True
     )
     is_correct: Mapped[bool] = Column(Boolean, default=False)
+    selected_answer: Mapped[Optional[int]] = Column(Integer)  # index 0-3 of chosen option
     hints_used: Mapped[int] = Column(Integer, default=0)
     completed_at: Mapped[DateTime] = Column(
         DateTime(timezone=True), server_default=func.now()
@@ -211,11 +214,16 @@ class CodeSubmission(Base):
     __tablename__ = "code_submissions"
 
     id: Mapped[int] = Column(Integer, primary_key=True, index=True)
-    user_id: Mapped[int] = Column(Integer, ForeignKey("users.id"), nullable=False)
-    question_id: Mapped[Optional[int]] = Column(Integer, ForeignKey("quiz_questions.id"))
+    user_id: Mapped[int] = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    question_id: Mapped[Optional[int]] = Column(Integer, ForeignKey("quiz_questions.id"), index=True)
     code: Mapped[str] = Column(Text, nullable=False)
     language: Mapped[str] = Column(String(20), default="python")
-    ai_feedback: Mapped[Optional[dict]] = Column(JSON)  # AI analysis
+    # Normalized execution result — replaces opaque ai_feedback JSON for queryable fields
+    execution_status: Mapped[Optional[str]] = Column(String(20))  # passed / failed / error / timeout
+    tests_passed: Mapped[Optional[int]] = Column(Integer)
+    tests_total: Mapped[Optional[int]] = Column(Integer)
+    error_message: Mapped[Optional[str]] = Column(Text)
+    ai_feedback: Mapped[Optional[dict]] = Column(JSON)  # full AI analysis blob (kept for display)
     notes: Mapped[Optional[str]] = Column(Text)
     created_at: Mapped[DateTime] = Column(
         DateTime(timezone=True), server_default=func.now()
@@ -223,6 +231,10 @@ class CodeSubmission(Base):
 
     # Relationships
     user: Mapped["User"] = relationship("User", back_populates="code_submissions")
+
+    __table_args__ = (
+        Index("ix_code_submissions_user_created", "user_id", "created_at"),
+    )
 
 
 class DailyKnowledgeQuestion(Base):
@@ -281,6 +293,30 @@ class DailyKnowledgeAttempt(Base):
     question: Mapped["DailyKnowledgeQuestion"] = relationship(
         "DailyKnowledgeQuestion", back_populates="attempts"
     )
+
+    __table_args__ = (
+        Index("ix_daily_attempts_user_completed", "user_id", "completed_at"),
+    )
+
+
+class RefreshToken(Base):
+    """
+    Refresh token for extending sessions without re-login.
+
+    Access tokens expire in 15 minutes. Refresh tokens are long-lived (30 days)
+    and stored server-side so they can be individually revoked.
+    """
+
+    __tablename__ = "refresh_tokens"
+
+    id: Mapped[int] = Column(Integer, primary_key=True, index=True)
+    user_id: Mapped[int] = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    token_hash: Mapped[str] = Column(String(64), unique=True, nullable=False, index=True)
+    expires_at: Mapped[DateTime] = Column(DateTime(timezone=True), nullable=False)
+    revoked: Mapped[bool] = Column(Boolean, default=False)
+    created_at: Mapped[DateTime] = Column(DateTime(timezone=True), server_default=func.now())
+
+    user: Mapped["User"] = relationship("User")
 
 
 class KnowledgeEmbedding(Base):

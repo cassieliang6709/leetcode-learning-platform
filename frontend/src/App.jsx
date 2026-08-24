@@ -1,15 +1,18 @@
+import { Suspense, lazy } from 'react'
 import { BrowserRouter as Router, Routes, Route, Link, Navigate } from 'react-router-dom'
 import { ThemeProvider, useTheme } from './contexts/ThemeContext'
 import { AuthProvider, useAuth } from './contexts/AuthContext'
-import HomePage from './pages/HomePage'
-import RoadmapPage from './pages/RoadmapPage'
-import LearningPage from './pages/LearningPage'
-import QuizPage from './pages/QuizPage'
-import CodeCheckPage from './pages/CodeCheckPage'
-import LoginPage from './pages/LoginPage'
-import RegisterPage from './pages/RegisterPage'
+import LandingPage from './pages/LandingPage'
 import './App.css'
 import './styles/skeleton.css'
+
+const HomePage = lazy(() => import('./pages/HomePage'))
+const RoadmapPage = lazy(() => import('./pages/RoadmapPage'))
+const LearningPage = lazy(() => import('./pages/LearningPage'))
+const QuizPage = lazy(() => import('./pages/QuizPage'))
+const CodeCheckPage = lazy(() => import('./pages/CodeCheckPage'))
+const LoginPage = lazy(() => import('./pages/LoginPage'))
+const RegisterPage = lazy(() => import('./pages/RegisterPage'))
 
 function ProtectedRoute({ children }) {
   const { isAuthenticated, loading } = useAuth()
@@ -49,6 +52,7 @@ function AppContent() {
             <div className="nav-right">
               <div className="nav-links">
                 <Link to="/">Home</Link>
+                <Link to="/dashboard">Dashboard</Link>
                 <Link to="/roadmap">Roadmap</Link>
                 <Link to="/code-check">Code Check</Link>
               </div>
@@ -71,17 +75,20 @@ function AppContent() {
         </nav>
 
         <main className="main-content">
-          <Routes>
-            <Route path="/login" element={<LoginPage />} />
-            <Route path="/register" element={<RegisterPage />} />
-            {/* Guest mode: most pages are accessible without login */}
-            <Route path="/" element={<HomePage />} />
-            <Route path="/roadmap" element={<RoadmapPage />} />
-            <Route path="/roadmap/:pointId/learn" element={<LearningPage />} />
-            <Route path="/quiz/:knowledgePointId" element={<QuizPage />} />
-            <Route path="/code-check" element={<CodeCheckPage />} />
-            <Route path="/code-check/:questionId" element={<CodeCheckPage />} />
-          </Routes>
+          <Suspense fallback={<div className="loading-screen">Loading...</div>}>
+            <Routes>
+              <Route path="/login" element={<LoginPage />} />
+              <Route path="/register" element={<RegisterPage />} />
+              {/* Guest mode: most pages are accessible without login */}
+              <Route path="/" element={<LandingPage />} />
+              <Route path="/dashboard" element={<HomePage />} />
+              <Route path="/roadmap" element={<RoadmapPage />} />
+              <Route path="/roadmap/:pointId/learn" element={<LearningPage />} />
+              <Route path="/quiz/:knowledgePointId" element={<QuizPage />} />
+              <Route path="/code-check" element={<CodeCheckPage />} />
+              <Route path="/code-check/:questionId" element={<CodeCheckPage />} />
+            </Routes>
+          </Suspense>
         </main>
       </div>
     </Router>
@@ -99,4 +106,3 @@ function App() {
 }
 
 export default App
-

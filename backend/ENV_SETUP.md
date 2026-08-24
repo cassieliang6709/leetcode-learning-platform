@@ -25,7 +25,7 @@ code .env
 
 **DATABASE_URL** - 数据库连接地址
 ```
-DATABASE_URL=postgresql+asyncpg://YOUR_USERNAME@localhost:5432/leetcode_learning
+DATABASE_URL=postgresql+asyncpg://YOUR_USERNAME@localhost:5432/algomentor
 ```
 - 将 `YOUR_USERNAME` 替换为你的 PostgreSQL 用户名
 - 如果数据库不在本地或端口不是 5432，请相应修改
@@ -67,7 +67,7 @@ PORT=8000
 启动后端服务后，检查日志：
 ```bash
 cd backend
-source venv/bin/activate  # 如果使用虚拟环境
+source .venv/bin/activate  # 如果使用虚拟环境
 python main.py
 ```
 
@@ -88,10 +88,10 @@ ValueError: SILICONFLOW_API_KEY environment variable not set
 
 ```bash
 # Database Configuration
-DATABASE_URL=postgresql+asyncpg://myuser@localhost:5432/leetcode_learning
+DATABASE_URL=postgresql+asyncpg://myuser@localhost:5432/algomentor
 
 # SiliconFlow API Key (Required for AI features)
-SILICONFLOW_API_KEY=sk-ywiqoiuhlfyfsknsjsdmyvdllhwxsajvvafmszzbarckwzdv
+SILICONFLOW_API_KEY=YOUR_SILICONFLOW_API_KEY
 
 # OpenAI API Key (Optional - for AI features)
 OPENAI_API_KEY=sk-proj-xxxxxxxxxxxxx
@@ -138,7 +138,6 @@ A: 不建议。生产环境应该使用：
 ```
 
 访问 http://localhost:5173 开始使用！
-
 
 
 

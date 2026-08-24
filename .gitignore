@@ -5,6 +5,8 @@ __pycache__/
 *.so
 .Python
 venv/
+.venv/
+.claude/
 env/
 ENV/
 *.egg-info/
@@ -64,4 +66,3 @@ htmlcov/
 
 # Sensitive files
 PASSWORD
-
